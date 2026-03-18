@@ -684,40 +684,13 @@ private struct SettingsPage_: View {
                 // Hotkeys
                 SettingsSection(title: "Hotkeys") {
                     SettingsRow(label: "Push to Talk") {
-                        HotkeyRecorderView(
-                            hotkeyManager: appState.hotkeyManager,
-                            binding: Binding(
-                                get: { appState.hotkeyManager.pushToTalkBinding },
-                                set: {
-                                    appState.hotkeyManager.pushToTalkBinding = $0
-                                    appState.hotkeyManager.saveBindings()
-                                }
-                            )
-                        )
+                        HotkeyLabel(binding: appState.hotkeyManager.pushToTalkBinding)
                     }
                     SettingsRow(label: "Flow Mode") {
-                        HotkeyRecorderView(
-                            hotkeyManager: appState.hotkeyManager,
-                            binding: Binding(
-                                get: { appState.hotkeyManager.flowBinding },
-                                set: {
-                                    appState.hotkeyManager.flowBinding = $0
-                                    appState.hotkeyManager.saveBindings()
-                                }
-                            )
-                        )
+                        HotkeyLabel(binding: appState.hotkeyManager.flowBinding)
                     }
                     SettingsRow(label: "Command Mode") {
-                        HotkeyRecorderView(
-                            hotkeyManager: appState.hotkeyManager,
-                            binding: Binding(
-                                get: { appState.hotkeyManager.commandBinding },
-                                set: {
-                                    appState.hotkeyManager.commandBinding = $0
-                                    appState.hotkeyManager.saveBindings()
-                                }
-                            )
-                        )
+                        HotkeyLabel(binding: appState.hotkeyManager.commandBinding)
                     }
                 }
 

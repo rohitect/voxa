@@ -149,10 +149,6 @@ final class HotkeyManager {
     var flowBinding: HotkeyBinding
     var commandBinding: HotkeyBinding
 
-    /// When set, the event tap captures the next key+modifier combo and calls this callback
-    /// instead of dispatching to mode handlers. Used for hotkey recording in Settings.
-    var recordingCallback: ((UInt16, CGEventFlags) -> Void)?
-
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var currentFlags: CGEventFlags = []
@@ -234,46 +230,6 @@ final class HotkeyManager {
         }
 
         let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
-
-        // Recording mode: capture the next key+modifier combo for hotkey configuration
-        if let callback = recordingCallback, type == .keyDown {
-            let isRepeat = event.getIntegerValueField(.keyboardEventAutorepeat)
-            guard isRepeat == 0 else { return nil }
-
-            // Ignore modifier-only keys
-            let modifierKeyCodes: Set<Int> = [
-                kVK_Shift, kVK_RightShift,
-                kVK_Control, kVK_RightControl,
-                kVK_Option, kVK_RightOption,
-                kVK_Command, kVK_RightCommand,
-                kVK_CapsLock,
-            ]
-            guard !modifierKeyCodes.contains(Int(keyCode)) else { return nil }
-
-            // Escape cancels recording
-            if Int(keyCode) == kVK_Escape {
-                DispatchQueue.main.async { [weak self] in
-                    self?.recordingCallback = nil
-                }
-                return nil
-            }
-
-            // Build clean modifier flags
-            var flags: CGEventFlags = []
-            if currentFlags.contains(.maskControl) { flags.insert(.maskControl) }
-            if currentFlags.contains(.maskAlternate) { flags.insert(.maskAlternate) }
-            if currentFlags.contains(.maskShift) { flags.insert(.maskShift) }
-            if currentFlags.contains(.maskCommand) { flags.insert(.maskCommand) }
-
-            // Require at least one modifier
-            guard !flags.isEmpty else { return nil }
-
-            DispatchQueue.main.async { [weak self] in
-                self?.recordingCallback = nil
-                callback(keyCode, flags)
-            }
-            return nil // swallow
-        }
 
         if type == .keyDown {
             // Ignore key repeats

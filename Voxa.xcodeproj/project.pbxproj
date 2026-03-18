@@ -23,7 +23,6 @@
 		8F9D6490741B9F92866BF08B /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B81DE9FD96DC94636D6C28A /* MenuBarView.swift */; };
 		9CD44CA01F236E79D165D525 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F659874E215B9F71C3C03CE3 /* SoundManager.swift */; };
 		B088CFA23B3A8048F0BD13B9 /* DictionaryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AECC1FC9EDAB7C9BCD68E44 /* DictionaryManager.swift */; };
-		BDBC8253DDAE2FAC672F94FC /* HotkeyRecorderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD110B6F6F1E7645CCFC26F4 /* HotkeyRecorderView.swift */; };
 		C0FBFF9FB00D764D693257CD /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3427E9DA792E8FE869A23A1B /* WhisperKit */; };
 		CD52015A37EE22353F01EE45 /* TranscriptionHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19D0DB873F7BEA23E75C2F1E /* TranscriptionHistory.swift */; };
 		CF74DDAAE8C176BDAF9D3C3F /* ModelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5908D921F68AB538C5B92896 /* ModelManager.swift */; };
@@ -55,7 +54,6 @@
 		98915D73ECF0366662F8567A /* FlowMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowMode.swift; sourceTree = "<group>"; };
 		9E8F971582777A3E0EADED22 /* VoxaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoxaApp.swift; sourceTree = "<group>"; };
 		A6B812B93F88479C67D3BCB0 /* DictationMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationMode.swift; sourceTree = "<group>"; };
-		AD110B6F6F1E7645CCFC26F4 /* HotkeyRecorderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyRecorderView.swift; sourceTree = "<group>"; };
 		AEC105248C8759342B689409 /* PermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionManager.swift; sourceTree = "<group>"; };
 		B28A7372282125867EC6D720 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B99402AD2F3FBC19978C0D27 /* Voxa.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Voxa.entitlements; sourceTree = "<group>"; };
@@ -139,7 +137,6 @@
 			isa = PBXGroup;
 			children = (
 				3D5738B6DCBF246FDD10B1A8 /* FloatingIndicator.swift */,
-				AD110B6F6F1E7645CCFC26F4 /* HotkeyRecorderView.swift */,
 				7B81DE9FD96DC94636D6C28A /* MenuBarView.swift */,
 				CB859B3D0A611EC208E91D51 /* ModelDownloadView.swift */,
 				08EC3F1EB29314EEF956810C /* OnboardingView.swift */,
@@ -267,7 +264,6 @@
 				DC8EDDDB34794C9E2483F61D /* FloatingIndicator.swift in Sources */,
 				E00CF06F397576234F8FF3DB /* FlowMode.swift in Sources */,
 				13F2ACA4B0FA426946CFBECF /* HotkeyManager.swift in Sources */,
-				BDBC8253DDAE2FAC672F94FC /* HotkeyRecorderView.swift in Sources */,
 				E49EE3F88FD38FD038D9CA06 /* Logger.swift in Sources */,
 				8F9D6490741B9F92866BF08B /* MenuBarView.swift in Sources */,
 				869F466ED4A327B0BDC6EAD7 /* ModelDownloadView.swift in Sources */,
