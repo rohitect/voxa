@@ -536,12 +536,50 @@ private struct ModelsPage: View {
                         .font(.subheadline)
                 }
 
-                // STT Model
+                // STT Provider Picker
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Speech-to-Text")
+                    Text("Speech Engine")
                         .font(.headline)
 
-                    let models = ModelManager.availableModels
+                    VStack(spacing: 1) {
+                        ForEach(STTProvider.allCases) { provider in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(provider.rawValue)
+                                        .font(.system(size: 13, weight: .medium))
+                                    Text(provider.description)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+
+                                if provider == appState.transcriptionEngine.provider {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(Color.accentColor)
+                                } else {
+                                    Button("Switch") {
+                                        appState.switchProvider(to: provider)
+                                    }
+                                    .font(.caption)
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(Color(.controlBackgroundColor))
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+
+                // STT Model
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Speech-to-Text Model")
+                        .font(.headline)
+
+                    let models = ModelManager.availableModels(for: appState.modelManager.provider)
                     VStack(spacing: 1) {
                         ForEach(models, id: \.self) { model in
                             HStack {

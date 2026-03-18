@@ -179,7 +179,9 @@ final class TextCleanupEngine {
     private func buildPrompt(for text: String) -> String {
         """
         Clean up this dictated text. Remove filler words (um, uh, like), \
-        fix grammar, add punctuation. Keep the meaning exactly the same. \
+        fix grammar, add proper punctuation (periods, commas, question marks, \
+        exclamation marks). Questions must end with a question mark. \
+        Keep the meaning exactly the same. \
         Output ONLY the cleaned text, nothing else.
 
         Input: \(text)

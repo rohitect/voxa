@@ -1,5 +1,32 @@
 import Carbon
 
+// MARK: - STT Provider
+
+enum STTProvider: String, CaseIterable, Identifiable {
+    case whisperKit = "WhisperKit"
+    case parakeet = "Parakeet"
+
+    var id: String { rawValue }
+
+    var description: String {
+        switch self {
+        case .whisperKit: "OpenAI Whisper via WhisperKit (CoreML)"
+        case .parakeet: "NVIDIA Parakeet via FluidAudio (CoreML)"
+        }
+    }
+
+    private static let defaultsKey = "sttProvider"
+
+    static var saved: STTProvider {
+        get {
+            guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+                  let provider = STTProvider(rawValue: raw) else { return .whisperKit }
+            return provider
+        }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: defaultsKey) }
+    }
+}
+
 enum Constants {
     // MARK: - Storage
     /// Root directory for all Voxa data (~/.voxa/)
@@ -22,7 +49,7 @@ enum Constants {
     /// Default Ollama model for text cleanup
     static let ollamaDefaultModel: String = "llama3.2:3b-instruct-q4_K_M"
     /// Maximum time to wait for Ollama cleanup before falling back to raw transcript
-    static let ollamaTimeout: TimeInterval = 0.5
+    static let ollamaTimeout: TimeInterval = 3.0
     /// Maximum time to wait for Ollama rewrite in Command Mode (rewrites are more complex)
     static let ollamaRewriteTimeout: TimeInterval = 15.0
 }

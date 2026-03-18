@@ -34,11 +34,22 @@ final class AppState {
     init() {
         setupHotkeyCallbacks()
         setupAudioLevelLogging()
+        setupModelReadyCallback()
     }
 
     /// Checks if Ollama is running and refreshes available models.
     func refreshOllamaStatus() async {
         await textCleanupEngine.refreshStatus()
+    }
+
+    /// Switches the STT provider, unloads the current model, and loads the new one.
+    func switchProvider(to provider: STTProvider) {
+        transcriptionEngine.unloadModel()
+        transcriptionEngine.provider = provider
+        modelManager.provider = provider
+        Task {
+            await loadTranscriptionModel()
+        }
     }
 
     func requestPermissions() {
@@ -56,8 +67,14 @@ final class AppState {
         }
     }
 
-    /// Loads the transcription model if a model is downloaded and ready.
+    /// Loads the transcription model. Downloads first if not available locally.
     func loadTranscriptionModel() async {
+        // If model isn't ready locally, download it
+        if case .notDownloaded = modelManager.modelState {
+            Log.model.info("Selected model not found locally — downloading \(self.modelManager.selectedModel)")
+            await modelManager.downloadSelectedModel()
+        }
+
         guard case .ready(let path) = modelManager.modelState else {
             Log.model.info("No model ready to load")
             return
@@ -101,6 +118,20 @@ final class AppState {
         hotkeyManager.onCommandUp = { [weak self] in
             guard let self else { return }
             CommandMode.onHotkeyUp(appState: self)
+        }
+    }
+
+    private func setupModelReadyCallback() {
+        modelManager.onModelReady = { [weak self] path in
+            guard let self else { return }
+            Task {
+                self.transcriptionEngine.unloadModel()
+                do {
+                    try await self.transcriptionEngine.loadModel(from: path)
+                } catch {
+                    Log.model.error("Failed to load model after ready: \(error)")
+                }
+            }
         }
     }
 

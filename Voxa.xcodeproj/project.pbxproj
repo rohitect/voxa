@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0A1B2C3D4E5F6A7B8C9D0E1F /* ParakeetEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F7A8B9C0D1E2F /* ParakeetEngine.swift */; };
+		2B3C4D5E6F7A8B9C0D1E2F3A /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = 4D5E6F7A8B9C0D1E2F3A4B5C /* FluidAudio */; };
 		0B6EF18E8CDD05CB05398430 /* TextCleanupEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 752B1E26D16B132B33242D9D /* TextCleanupEngine.swift */; };
 		13F2ACA4B0FA426946CFBECF /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25871F13F85E7402CCEE5173 /* HotkeyManager.swift */; };
 		20276B62B8418E999BFF83C0 /* TranscriptionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7433663EC6F3EEC236140B2 /* TranscriptionEngine.swift */; };
@@ -36,6 +38,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		1A2B3C4D5E6F7A8B9C0D1E2F /* ParakeetEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetEngine.swift; sourceTree = "<group>"; };
 		08EC3F1EB29314EEF956810C /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		0AECC1FC9EDAB7C9BCD68E44 /* DictionaryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryManager.swift; sourceTree = "<group>"; };
 		19D0DB873F7BEA23E75C2F1E /* TranscriptionHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionHistory.swift; sourceTree = "<group>"; };
@@ -72,6 +75,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C0FBFF9FB00D764D693257CD /* WhisperKit in Frameworks */,
+				2B3C4D5E6F7A8B9C0D1E2F3A /* FluidAudio in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -166,6 +170,7 @@
 			children = (
 				FD1823E065D2F7C6D58A4B09 /* AudioEngine.swift */,
 				25871F13F85E7402CCEE5173 /* HotkeyManager.swift */,
+				1A2B3C4D5E6F7A8B9C0D1E2F /* ParakeetEngine.swift */,
 				752B1E26D16B132B33242D9D /* TextCleanupEngine.swift */,
 				D5BD0E36627EEB45E979811A /* TextInjector.swift */,
 				F7433663EC6F3EEC236140B2 /* TranscriptionEngine.swift */,
@@ -202,6 +207,7 @@
 			name = Voxa;
 			packageProductDependencies = (
 				3427E9DA792E8FE869A23A1B /* WhisperKit */,
+				4D5E6F7A8B9C0D1E2F3A4B5C /* FluidAudio */,
 			);
 			productName = Voxa;
 			productReference = C19EC1FC8BBC2C5090B92A07 /* Voxa.app */;
@@ -229,6 +235,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				A733BB27433287A629A7FA49 /* XCRemoteSwiftPackageReference "WhisperKit" */,
+				5E6F7A8B9C0D1E2F3A4B5C6D /* XCRemoteSwiftPackageReference "FluidAudio" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1D21D1D46F5ACBE89EA488D3 /* Products */;
@@ -269,6 +276,7 @@
 				869F466ED4A327B0BDC6EAD7 /* ModelDownloadView.swift in Sources */,
 				CF74DDAAE8C176BDAF9D3C3F /* ModelManager.swift in Sources */,
 				260F46C58459F3CD6A34F8D5 /* OllamaClient.swift in Sources */,
+				0A1B2C3D4E5F6A7B8C9D0E1F /* ParakeetEngine.swift in Sources */,
 				DAB9103DDD718A42477C2F53 /* OnboardingView.swift in Sources */,
 				793D87F35329CAB8DCB2F80F /* PermissionManager.swift in Sources */,
 				37376D028A4541FB269A8116 /* PushToTalkMode.swift in Sources */,
@@ -481,6 +489,14 @@
 				minimumVersion = 0.9.0;
 			};
 		};
+		5E6F7A8B9C0D1E2F3A4B5C6D /* XCRemoteSwiftPackageReference "FluidAudio" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/FluidInference/FluidAudio";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.12.4;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -488,6 +504,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A733BB27433287A629A7FA49 /* XCRemoteSwiftPackageReference "WhisperKit" */;
 			productName = WhisperKit;
+		};
+		4D5E6F7A8B9C0D1E2F3A4B5C /* FluidAudio */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5E6F7A8B9C0D1E2F3A4B5C6D /* XCRemoteSwiftPackageReference "FluidAudio" */;
+			productName = FluidAudio;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

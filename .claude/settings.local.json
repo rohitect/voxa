@@ -18,7 +18,18 @@
       "Bash(xxd)",
       "WebFetch(domain:macpaw.com)",
       "Bash(wc -l /Users/rohitranjan/my/projects/voxa/Voxa/**/*.swift)",
-      "WebFetch(domain:openclaw.ai)"
+      "WebFetch(domain:openclaw.ai)",
+      "WebFetch(domain:docs.openclaw.ai)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.stanza.dev)",
+      "WebFetch(domain:zenvanriel.com)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:dev.to)",
+      "WebFetch(domain:zenvanriel.nl)",
+      "WebFetch(domain:1password.com)",
+      "Bash(xcodebuild -project Voxa.xcodeproj -scheme Voxa -configuration Debug build)",
+      "Bash(find ~/Library/Developer/Xcode/DerivedData/Voxa-*/SourcePackages/checkouts/FluidAudio/Sources/FluidAudio -name \"*.swift\")",
+      "Bash(defaults delete:*)"
     ]
   }
 }

@@ -1,7 +1,8 @@
 import Foundation
+import FluidAudio
 import WhisperKit
 
-/// Wraps WhisperKit to transcribe PCM audio buffers into text.
+/// Unified transcription facade that delegates to WhisperKit or Parakeet.
 @Observable
 final class TranscriptionEngine {
     struct Result {
@@ -18,34 +19,39 @@ final class TranscriptionEngine {
     }
 
     private var whisperKit: WhisperKit?
+    private let parakeetEngine = ParakeetEngine()
+
     private(set) var isLoaded = false
     var language: String? = "en" // nil = auto-detect
+    var provider: STTProvider = STTProvider.saved {
+        didSet { STTProvider.saved = provider }
+    }
 
-    /// Loads the WhisperKit model from a local folder path.
+    /// Loads the model for the current provider from a local folder path.
     func loadModel(from folderPath: String) async throws {
-        print("[TranscriptionEngine] Loading model from: \(folderPath)")
+        // Unload any existing model first
+        unloadModel()
 
-        let config = WhisperKitConfig(
-            modelFolder: folderPath,
-            computeOptions: ModelComputeOptions(),
-            download: false
-        )
-        whisperKit = try await WhisperKit(config)
+        switch provider {
+        case .whisperKit:
+            try await loadWhisperKit(from: folderPath)
+        case .parakeet:
+            try await loadParakeet(from: folderPath)
+        }
         isLoaded = true
-
-        print("[TranscriptionEngine] Model loaded successfully")
     }
 
     /// Unloads the current model to free memory.
     func unloadModel() {
         whisperKit = nil
+        parakeetEngine.unloadModel()
         isLoaded = false
         print("[TranscriptionEngine] Model unloaded")
     }
 
     /// Transcribes a PCM Float32 audio buffer (16kHz mono).
     func transcribe(audioBuffer: [Float]) async throws -> Result {
-        guard let whisperKit else {
+        guard isLoaded else {
             throw TranscriptionError.modelNotLoaded
         }
 
@@ -53,9 +59,35 @@ final class TranscriptionEngine {
             throw TranscriptionError.emptyAudio
         }
 
+        switch provider {
+        case .whisperKit:
+            return try await transcribeWithWhisperKit(audioBuffer: audioBuffer)
+        case .parakeet:
+            return try await transcribeWithParakeet(audioBuffer: audioBuffer)
+        }
+    }
+
+    // MARK: - WhisperKit Backend
+
+    private func loadWhisperKit(from folderPath: String) async throws {
+        print("[TranscriptionEngine] Loading WhisperKit model from: \(folderPath)")
+        let config = WhisperKitConfig(
+            modelFolder: folderPath,
+            computeOptions: ModelComputeOptions(),
+            download: false
+        )
+        whisperKit = try await WhisperKit(config)
+        print("[TranscriptionEngine] WhisperKit model loaded successfully")
+    }
+
+    private func transcribeWithWhisperKit(audioBuffer: [Float]) async throws -> Result {
+        guard let whisperKit else {
+            throw TranscriptionError.modelNotLoaded
+        }
+
         let sampleCount = audioBuffer.count
         let audioDuration = Double(sampleCount) / Constants.audioSampleRate
-        print("[TranscriptionEngine] Transcribing \(sampleCount) samples (\(String(format: "%.1f", audioDuration))s)")
+        print("[TranscriptionEngine] Transcribing \(sampleCount) samples (\(String(format: "%.1f", audioDuration))s) [WhisperKit]")
 
         let options = DecodingOptions(
             language: language,
@@ -88,11 +120,32 @@ final class TranscriptionEngine {
         )
 
         print("[TranscriptionEngine] Result (\(String(format: "%.2f", elapsed))s): \"\(result.text)\"")
-
         let timings = first.timings
         print("[TranscriptionEngine] Speed: \(String(format: "%.1f", timings.tokensPerSecond)) tokens/s, RTF: \(String(format: "%.2f", timings.realTimeFactor))")
 
         return result
+    }
+
+    // MARK: - Parakeet Backend
+
+    private func loadParakeet(from folderPath: String) async throws {
+        parakeetEngine.language = language
+        // Determine version from the folder path
+        let version: AsrModelVersion = folderPath.contains("v3") ? .v3 : .v2
+        try await parakeetEngine.loadModel(from: folderPath, version: version)
+    }
+
+    private func transcribeWithParakeet(audioBuffer: [Float]) async throws -> Result {
+        parakeetEngine.language = language
+        let parakeetResult = try await parakeetEngine.transcribe(audioBuffer: audioBuffer)
+        return Result(
+            text: parakeetResult.text,
+            segments: parakeetResult.segments.map { seg in
+                Result.Segment(text: seg.text, start: seg.start, end: seg.end)
+            },
+            language: parakeetResult.language,
+            duration: parakeetResult.duration
+        )
     }
 }
 
@@ -102,7 +155,7 @@ enum TranscriptionError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .modelNotLoaded: "WhisperKit model is not loaded"
+        case .modelNotLoaded: "Transcription model is not loaded"
         case .emptyAudio: "Audio buffer is empty"
         }
     }
