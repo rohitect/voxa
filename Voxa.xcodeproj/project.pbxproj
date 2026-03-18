@@ -35,6 +35,24 @@
 		E49EE3F88FD38FD038D9CA06 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DE57DDBF362E947D2BE8C82 /* Logger.swift */; };
 		F339102B90E529A39082E59A /* CommandMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84544E9583887B72EA52DC39 /* CommandMode.swift */; };
 		F74FFDCADA5DCB7C7FBDDF63 /* DictationMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6B812B93F88479C67D3BCB0 /* DictationMode.swift */; };
+		AA01020304050607 /* ChatTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB01020304050607 /* ChatTypes.swift */; };
+		AA02030405060708 /* LLMProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB02030405060708 /* LLMProvider.swift */; };
+		AA03040506070809 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB03040506070809 /* KeychainHelper.swift */; };
+		AA04050607080910 /* OllamaProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB04050607080910 /* OllamaProvider.swift */; };
+		AA05060708091011 /* OpenAIProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB05060708091011 /* OpenAIProvider.swift */; };
+		AA06070809101112 /* GeminiProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB06070809101112 /* GeminiProvider.swift */; };
+		AA07080910111213 /* LLMProviderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB07080910111213 /* LLMProviderManager.swift */; };
+		AA08091011121314 /* AgentCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB08091011121314 /* AgentCoordinator.swift */; };
+		AA09101112131415 /* AgentTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB09101112131415 /* AgentTool.swift */; };
+		AA10111213141516 /* ToolSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB10111213141516 /* ToolSettings.swift */; };
+		AA11121314151617 /* ToolRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB11121314151617 /* ToolRegistry.swift */; };
+		AA12131415161718 /* AppLauncherTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB12131415161718 /* AppLauncherTool.swift */; };
+		AA13141516171819 /* ClipboardTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB13141516171819 /* ClipboardTool.swift */; };
+		AA14151617181920 /* ScreenCaptureTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB14151617181920 /* ScreenCaptureTool.swift */; };
+		AA15161718192021 /* UIAutomationTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB15161718192021 /* UIAutomationTool.swift */; };
+		AA16171819202122 /* FileSearchTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB16171819202122 /* FileSearchTool.swift */; };
+		AA17181920212223 /* SystemSettingsTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB17181920212223 /* SystemSettingsTool.swift */; };
+		AA18192021222324 /* ShellCommandTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB18192021222324 /* ShellCommandTool.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -67,6 +85,24 @@
 		F659874E215B9F71C3C03CE3 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
 		F7433663EC6F3EEC236140B2 /* TranscriptionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionEngine.swift; sourceTree = "<group>"; };
 		FD1823E065D2F7C6D58A4B09 /* AudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEngine.swift; sourceTree = "<group>"; };
+		BB01020304050607 /* ChatTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTypes.swift; sourceTree = "<group>"; };
+		BB02030405060708 /* LLMProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProvider.swift; sourceTree = "<group>"; };
+		BB03040506070809 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
+		BB04050607080910 /* OllamaProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaProvider.swift; sourceTree = "<group>"; };
+		BB05060708091011 /* OpenAIProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIProvider.swift; sourceTree = "<group>"; };
+		BB06070809101112 /* GeminiProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiProvider.swift; sourceTree = "<group>"; };
+		BB07080910111213 /* LLMProviderManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProviderManager.swift; sourceTree = "<group>"; };
+		BB08091011121314 /* AgentCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentCoordinator.swift; sourceTree = "<group>"; };
+		BB09101112131415 /* AgentTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentTool.swift; sourceTree = "<group>"; };
+		BB10111213141516 /* ToolSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolSettings.swift; sourceTree = "<group>"; };
+		BB11121314151617 /* ToolRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolRegistry.swift; sourceTree = "<group>"; };
+		BB12131415161718 /* AppLauncherTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLauncherTool.swift; sourceTree = "<group>"; };
+		BB13141516171819 /* ClipboardTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardTool.swift; sourceTree = "<group>"; };
+		BB14151617181920 /* ScreenCaptureTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCaptureTool.swift; sourceTree = "<group>"; };
+		BB15161718192021 /* UIAutomationTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIAutomationTool.swift; sourceTree = "<group>"; };
+		BB16171819202122 /* FileSearchTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSearchTool.swift; sourceTree = "<group>"; };
+		BB17181920212223 /* SystemSettingsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSettingsTool.swift; sourceTree = "<group>"; };
+		BB18192021222324 /* ShellCommandTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellCommandTool.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -155,6 +191,7 @@
 				B28A7372282125867EC6D720 /* Info.plist */,
 				B99402AD2F3FBC19978C0D27 /* Voxa.entitlements */,
 				9E8F971582777A3E0EADED22 /* VoxaApp.swift */,
+				CC10111213141516 /* Agent */,
 				CC60702827627960D72A5B6D /* Core */,
 				FF98EB7D4EE2F77788AEA465 /* Models */,
 				10C0BE5824F6344123A80459 /* Modes */,
@@ -187,6 +224,63 @@
 				19D0DB873F7BEA23E75C2F1E /* TranscriptionHistory.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		CC10111213141516 /* Agent */ = {
+			isa = PBXGroup;
+			children = (
+				BB08091011121314 /* AgentCoordinator.swift */,
+				CC20212223242526 /* LLM */,
+				CC40414243444546 /* Tools */,
+				CC30313233343536 /* Utilities */,
+			);
+			path = Agent;
+			sourceTree = "<group>";
+		};
+		CC40414243444546 /* Tools */ = {
+			isa = PBXGroup;
+			children = (
+				BB09101112131415 /* AgentTool.swift */,
+				BB10111213141516 /* ToolSettings.swift */,
+				BB11121314151617 /* ToolRegistry.swift */,
+				CC50515253545556 /* Builtin */,
+			);
+			path = Tools;
+			sourceTree = "<group>";
+		};
+		CC50515253545556 /* Builtin */ = {
+			isa = PBXGroup;
+			children = (
+				BB12131415161718 /* AppLauncherTool.swift */,
+				BB13141516171819 /* ClipboardTool.swift */,
+				BB16171819202122 /* FileSearchTool.swift */,
+				BB14151617181920 /* ScreenCaptureTool.swift */,
+				BB18192021222324 /* ShellCommandTool.swift */,
+				BB17181920212223 /* SystemSettingsTool.swift */,
+				BB15161718192021 /* UIAutomationTool.swift */,
+			);
+			path = Builtin;
+			sourceTree = "<group>";
+		};
+		CC20212223242526 /* LLM */ = {
+			isa = PBXGroup;
+			children = (
+				BB01020304050607 /* ChatTypes.swift */,
+				BB06070809101112 /* GeminiProvider.swift */,
+				BB07080910111213 /* LLMProviderManager.swift */,
+				BB02030405060708 /* LLMProvider.swift */,
+				BB04050607080910 /* OllamaProvider.swift */,
+				BB05060708091011 /* OpenAIProvider.swift */,
+			);
+			path = LLM;
+			sourceTree = "<group>";
+		};
+		CC30313233343536 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				BB03040506070809 /* KeychainHelper.swift */,
+			);
+			path = Utilities;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -288,6 +382,24 @@
 				20276B62B8418E999BFF83C0 /* TranscriptionEngine.swift in Sources */,
 				CD52015A37EE22353F01EE45 /* TranscriptionHistory.swift in Sources */,
 				7E0313AE3DFD63B8A32DC5FF /* VoxaApp.swift in Sources */,
+				AA01020304050607 /* ChatTypes.swift in Sources */,
+				AA02030405060708 /* LLMProvider.swift in Sources */,
+				AA03040506070809 /* KeychainHelper.swift in Sources */,
+				AA04050607080910 /* OllamaProvider.swift in Sources */,
+				AA05060708091011 /* OpenAIProvider.swift in Sources */,
+				AA06070809101112 /* GeminiProvider.swift in Sources */,
+				AA07080910111213 /* LLMProviderManager.swift in Sources */,
+				AA08091011121314 /* AgentCoordinator.swift in Sources */,
+				AA09101112131415 /* AgentTool.swift in Sources */,
+				AA10111213141516 /* ToolSettings.swift in Sources */,
+				AA11121314151617 /* ToolRegistry.swift in Sources */,
+				AA12131415161718 /* AppLauncherTool.swift in Sources */,
+				AA13141516171819 /* ClipboardTool.swift in Sources */,
+				AA14151617181920 /* ScreenCaptureTool.swift in Sources */,
+				AA15161718192021 /* UIAutomationTool.swift in Sources */,
+				AA16171819202122 /* FileSearchTool.swift in Sources */,
+				AA17181920212223 /* SystemSettingsTool.swift in Sources */,
+				AA18192021222324 /* ShellCommandTool.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

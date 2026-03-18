@@ -131,6 +131,11 @@ extension HotkeyBinding {
         keyCode: UInt16(kVK_Space),
         modifiers: [.maskAlternate, .maskCommand]
     )
+    /// Ctrl+Space — Agent Mode
+    static let defaultAgent = HotkeyBinding(
+        keyCode: UInt16(kVK_Space),
+        modifiers: .maskControl
+    )
 }
 
 // MARK: - Hotkey Manager
@@ -143,11 +148,14 @@ final class HotkeyManager {
     var onFlowUp: (() -> Void)?
     var onCommandDown: (() -> Void)?
     var onCommandUp: (() -> Void)?
+    var onAgentDown: (() -> Void)?
+    var onAgentUp: (() -> Void)?
 
     /// Configurable bindings per mode
     var pushToTalkBinding: HotkeyBinding
     var flowBinding: HotkeyBinding
     var commandBinding: HotkeyBinding
+    var agentBinding: HotkeyBinding
 
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
@@ -160,12 +168,14 @@ final class HotkeyManager {
         pushToTalkBinding = HotkeyBinding.load(key: "hotkey.pushToTalk", default: .defaultPushToTalk)
         flowBinding = HotkeyBinding.load(key: "hotkey.flow", default: .defaultFlow)
         commandBinding = HotkeyBinding.load(key: "hotkey.command", default: .defaultCommand)
+        agentBinding = HotkeyBinding.load(key: "hotkey.agent", default: .defaultAgent)
     }
 
     func saveBindings() {
         pushToTalkBinding.save(key: "hotkey.pushToTalk")
         flowBinding.save(key: "hotkey.flow")
         commandBinding.save(key: "hotkey.command")
+        agentBinding.save(key: "hotkey.agent")
     }
 
     /// Returns true if the event tap was successfully created.
@@ -240,6 +250,12 @@ final class HotkeyManager {
             }
 
             // Check each binding (most specific modifiers first to avoid ambiguity)
+            // Agent mode: Ctrl+Space (unique modifier, check first)
+            if agentBinding.keyCode == keyCode && agentBinding.matchesModifiers(currentFlags) {
+                activeMode = .agent
+                DispatchQueue.main.async { [weak self] in self?.onAgentDown?() }
+                return nil
+            }
             // Command mode: Option+Shift+Space
             if commandBinding.keyCode == keyCode && commandBinding.matchesModifiers(currentFlags) {
                 activeMode = .command
@@ -272,6 +288,7 @@ final class HotkeyManager {
             case .pushToTalk: expectedKeyCode = pushToTalkBinding.keyCode
             case .flow: expectedKeyCode = flowBinding.keyCode
             case .command: expectedKeyCode = commandBinding.keyCode
+            case .agent: expectedKeyCode = agentBinding.keyCode
             }
             guard keyCode == expectedKeyCode else { return event }
 
@@ -283,6 +300,8 @@ final class HotkeyManager {
                 DispatchQueue.main.async { [weak self] in self?.onFlowUp?() }
             case .command:
                 DispatchQueue.main.async { [weak self] in self?.onCommandUp?() }
+            case .agent:
+                DispatchQueue.main.async { [weak self] in self?.onAgentUp?() }
             }
             return nil
         }

@@ -29,7 +29,9 @@
       "WebFetch(domain:1password.com)",
       "Bash(xcodebuild -project Voxa.xcodeproj -scheme Voxa -configuration Debug build)",
       "Bash(find ~/Library/Developer/Xcode/DerivedData/Voxa-*/SourcePackages/checkouts/FluidAudio/Sources/FluidAudio -name \"*.swift\")",
-      "Bash(defaults delete:*)"
+      "Bash(defaults delete:*)",
+      "WebFetch(domain:openclawconsult.com)",
+      "Bash(find /Users/rohitranjan/my/projects/voxa/Voxa/Agent -type f -name *.swift)"
     ]
   }
 }

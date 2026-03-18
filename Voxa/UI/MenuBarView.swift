@@ -33,6 +33,7 @@ struct MenuBarView: View {
                 hotkeyRow(icon: "hand.tap.fill", label: "Talk", binding: appState.hotkeyManager.pushToTalkBinding)
                 hotkeyRow(icon: "waveform.path", label: "Flow", binding: appState.hotkeyManager.flowBinding)
                 hotkeyRow(icon: "text.cursor", label: "Command", binding: appState.hotkeyManager.commandBinding)
+                hotkeyRow(icon: "brain.head.profile", label: "Agent", binding: appState.hotkeyManager.agentBinding)
             }
             .padding(.horizontal, 4)
 

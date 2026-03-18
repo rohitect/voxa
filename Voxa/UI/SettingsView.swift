@@ -8,6 +8,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     case dictionary = "Dictionary"
     case snippets = "Snippets"
     case models = "Models"
+    case agent = "Agent"
     case settings = "Settings"
 
     var id: String { rawValue }
@@ -18,6 +19,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .dictionary: return "character.book.closed"
         case .snippets: return "text.quote"
         case .models: return "cpu"
+        case .agent: return "brain.head.profile"
         case .settings: return "gear"
         }
     }
@@ -111,6 +113,8 @@ struct SettingsView: View {
             SnippetsPage()
         case .models:
             ModelsPage(appState: appState)
+        case .agent:
+            AgentSettingsPage(appState: appState)
         case .settings:
             SettingsPage_(appState: appState)
         }
@@ -667,6 +671,123 @@ private struct ModelsPage: View {
     }
 }
 
+// MARK: - Agent Settings Page
+
+private struct AgentSettingsPage: View {
+    let appState: AppState
+    @State private var openAIKey: String = KeychainHelper.load(key: OpenAIProvider.apiKeyKeychainKey) ?? ""
+    @State private var geminiKey: String = KeychainHelper.load(key: GeminiProvider.apiKeyKeychainKey) ?? ""
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                // Header
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Agent")
+                        .font(.title)
+                        .fontWeight(.bold)
+                    Text("Configure the AI agent LLM provider and model.")
+                        .foregroundStyle(.secondary)
+                        .font(.subheadline)
+                }
+
+                // Provider picker
+                SettingsSection(title: "Provider") {
+                    ForEach(appState.agentCoordinator.providerManager.availableProviderNames, id: \.self) { name in
+                        SettingsRow(label: name) {
+                            if appState.agentCoordinator.providerManager.activeProviderName == name {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(Color.accentColor)
+                            } else {
+                                Button("Select") {
+                                    appState.agentCoordinator.providerManager.setActiveProvider(name)
+                                }
+                                .font(.caption)
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                            }
+                        }
+                    }
+                }
+
+                // Model config
+                SettingsSection(title: "Model") {
+                    SettingsRow(label: "Active Model") {
+                        TextField("Model ID", text: Binding(
+                            get: { appState.agentCoordinator.providerManager.activeModel },
+                            set: { appState.agentCoordinator.providerManager.setModel($0, for: appState.agentCoordinator.providerManager.activeProviderName) }
+                        ))
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 220)
+                    }
+                }
+
+                // API Keys
+                SettingsSection(title: "API Keys") {
+                    SettingsRow(label: "OpenAI") {
+                        SecureField("sk-...", text: $openAIKey)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 220)
+                            .onChange(of: openAIKey) { _, newValue in
+                                if newValue.isEmpty {
+                                    KeychainHelper.delete(key: OpenAIProvider.apiKeyKeychainKey)
+                                } else {
+                                    KeychainHelper.save(key: OpenAIProvider.apiKeyKeychainKey, value: newValue)
+                                }
+                            }
+                    }
+                    SettingsRow(label: "Gemini") {
+                        SecureField("AI...", text: $geminiKey)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 220)
+                            .onChange(of: geminiKey) { _, newValue in
+                                if newValue.isEmpty {
+                                    KeychainHelper.delete(key: GeminiProvider.apiKeyKeychainKey)
+                                } else {
+                                    KeychainHelper.save(key: GeminiProvider.apiKeyKeychainKey, value: newValue)
+                                }
+                            }
+                    }
+                }
+
+                // Hotkey
+                SettingsSection(title: "Hotkey") {
+                    SettingsRow(label: "Agent Mode") {
+                        HotkeyLabel(binding: appState.hotkeyManager.agentBinding)
+                    }
+                }
+
+                // Tools
+                SettingsSection(title: "Tools") {
+                    ForEach(appState.agentCoordinator.toolRegistry.allTools, id: \.name) { tool in
+                        SettingsRow(label: toolDisplayName(tool.name)) {
+                            HStack(spacing: 6) {
+                                if tool.requiresConfirmation {
+                                    Image(systemName: "shield.fill")
+                                        .foregroundStyle(.orange)
+                                        .font(.caption)
+                                        .help("Requires user confirmation")
+                                }
+                                Toggle("", isOn: Binding(
+                                    get: { appState.agentCoordinator.toolRegistry.settings.isEnabled(tool.name) },
+                                    set: { appState.agentCoordinator.toolRegistry.settings.setEnabled(tool.name, enabled: $0) }
+                                ))
+                                .toggleStyle(.switch)
+                                .controlSize(.small)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(24)
+        }
+    }
+
+    private func toolDisplayName(_ name: String) -> String {
+        name.split(separator: "_").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined(separator: " ")
+    }
+}
+
 // MARK: - Settings Page
 
 private struct SettingsPage_: View {
@@ -729,6 +850,9 @@ private struct SettingsPage_: View {
                     }
                     SettingsRow(label: "Command Mode") {
                         HotkeyLabel(binding: appState.hotkeyManager.commandBinding)
+                    }
+                    SettingsRow(label: "Agent Mode") {
+                        HotkeyLabel(binding: appState.hotkeyManager.agentBinding)
                     }
                 }
 

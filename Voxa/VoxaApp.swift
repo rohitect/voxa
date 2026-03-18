@@ -30,8 +30,10 @@ final class AppState {
     let modelManager = ModelManager()
     let transcriptionEngine = TranscriptionEngine()
     let textCleanupEngine = TextCleanupEngine()
+    let agentCoordinator: AgentCoordinator
 
     init() {
+        agentCoordinator = AgentCoordinator(audioEngine: audioEngine, transcriptionEngine: transcriptionEngine)
         setupHotkeyCallbacks()
         setupAudioLevelLogging()
         setupModelReadyCallback()
@@ -118,6 +120,16 @@ final class AppState {
         hotkeyManager.onCommandUp = { [weak self] in
             guard let self else { return }
             CommandMode.onHotkeyUp(appState: self)
+        }
+
+        hotkeyManager.onAgentDown = { [weak self] in
+            guard let self else { return }
+            self.currentMode = .agent
+            self.agentCoordinator.onHotkeyDown(appState: self)
+        }
+        hotkeyManager.onAgentUp = { [weak self] in
+            guard let self else { return }
+            self.agentCoordinator.onHotkeyUp(appState: self)
         }
     }
 
