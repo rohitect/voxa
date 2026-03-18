@@ -757,6 +757,25 @@ private struct AgentSettingsPage: View {
                     }
                 }
 
+                // Panel Mode
+                SettingsSection(title: "Agent Panel") {
+                    SettingsRow(label: "Panel Mode") {
+                        Picker("", selection: Binding(
+                            get: { AgentPanel.shared.state.panelMode },
+                            set: { AgentPanel.shared.state.panelMode = $0 }
+                        )) {
+                            Text("Persistent").tag(AgentPanelState.PanelMode.persistent)
+                            Text("Pop-up").tag(AgentPanelState.PanelMode.popUp)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 180)
+                    }
+                    Text("Persistent: panel stays open across turns. Pop-up: appears per turn, auto-dismisses.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 12)
+                }
+
                 // Tools
                 SettingsSection(title: "Tools") {
                     ForEach(appState.agentCoordinator.toolRegistry.allTools, id: \.name) { tool in

@@ -3,7 +3,7 @@ import Foundation
 /// LLM provider backed by the Google Gemini generateContent API.
 struct GeminiProvider: LLMProvider {
     let name = "Gemini"
-    let defaultModel = "gemini-2.0-flash"
+    let defaultModel = "gemini-3-flash-preview"
 
     static let apiKeyKeychainKey = "gemini_api_key"
     private let baseURL = "https://generativelanguage.googleapis.com/v1beta/models"
@@ -119,8 +119,8 @@ struct GeminiProvider: LLMProvider {
     ) throws -> URLRequest {
         guard let apiKey else { throw LLMError.invalidAPIKey }
 
-        let endpoint = stream ? "streamGenerateContent?alt=sse" : "generateContent"
-        let url = URL(string: "\(baseURL)/\(model):\(endpoint)&key=\(apiKey)")!
+        let endpoint = stream ? "streamGenerateContent?alt=sse&key=\(apiKey)" : "generateContent?key=\(apiKey)"
+        let url = URL(string: "\(baseURL)/\(model):\(endpoint)")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

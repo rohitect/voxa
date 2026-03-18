@@ -53,6 +53,12 @@
 		AA16171819202122 /* FileSearchTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB16171819202122 /* FileSearchTool.swift */; };
 		AA17181920212223 /* SystemSettingsTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB17181920212223 /* SystemSettingsTool.swift */; };
 		AA18192021222324 /* ShellCommandTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB18192021222324 /* ShellCommandTool.swift */; };
+		AA19202122232425 /* AgentResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB19202122232425 /* AgentResponse.swift */; };
+		AA20212223242526 /* IntentClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB20212223242526 /* IntentClassifier.swift */; };
+		AA21222324252627 /* ChatSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB21222324252627 /* ChatSession.swift */; };
+		AA22232425262728 /* AgentExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22232425262728 /* AgentExecutor.swift */; };
+		AA23242526272829 /* AgentPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB23242526272829 /* AgentPanel.swift */; };
+		AA24252627282930 /* AgentPanelContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB24252627282930 /* AgentPanelContent.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -103,6 +109,12 @@
 		BB16171819202122 /* FileSearchTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSearchTool.swift; sourceTree = "<group>"; };
 		BB17181920212223 /* SystemSettingsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSettingsTool.swift; sourceTree = "<group>"; };
 		BB18192021222324 /* ShellCommandTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellCommandTool.swift; sourceTree = "<group>"; };
+		BB19202122232425 /* AgentResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentResponse.swift; sourceTree = "<group>"; };
+		BB20212223242526 /* IntentClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentClassifier.swift; sourceTree = "<group>"; };
+		BB21222324252627 /* ChatSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSession.swift; sourceTree = "<group>"; };
+		BB22232425262728 /* AgentExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentExecutor.swift; sourceTree = "<group>"; };
+		BB23242526272829 /* AgentPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentPanel.swift; sourceTree = "<group>"; };
+		BB24252627282930 /* AgentPanelContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentPanelContent.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -176,6 +188,8 @@
 		AF9C450FE148B7CC1BA230CD /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				BB23242526272829 /* AgentPanel.swift */,
+				BB24252627282930 /* AgentPanelContent.swift */,
 				3D5738B6DCBF246FDD10B1A8 /* FloatingIndicator.swift */,
 				7B81DE9FD96DC94636D6C28A /* MenuBarView.swift */,
 				CB859B3D0A611EC208E91D51 /* ModelDownloadView.swift */,
@@ -230,6 +244,10 @@
 			isa = PBXGroup;
 			children = (
 				BB08091011121314 /* AgentCoordinator.swift */,
+				BB22232425262728 /* AgentExecutor.swift */,
+				BB19202122232425 /* AgentResponse.swift */,
+				BB21222324252627 /* ChatSession.swift */,
+				BB20212223242526 /* IntentClassifier.swift */,
 				CC20212223242526 /* LLM */,
 				CC40414243444546 /* Tools */,
 				CC30313233343536 /* Utilities */,
@@ -400,6 +418,12 @@
 				AA16171819202122 /* FileSearchTool.swift in Sources */,
 				AA17181920212223 /* SystemSettingsTool.swift in Sources */,
 				AA18192021222324 /* ShellCommandTool.swift in Sources */,
+				AA19202122232425 /* AgentResponse.swift in Sources */,
+				AA20212223242526 /* IntentClassifier.swift in Sources */,
+				AA21222324252627 /* ChatSession.swift in Sources */,
+				AA22232425262728 /* AgentExecutor.swift in Sources */,
+				AA23242526272829 /* AgentPanel.swift in Sources */,
+				AA24252627282930 /* AgentPanelContent.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

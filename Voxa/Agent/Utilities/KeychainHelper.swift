@@ -1,56 +1,64 @@
 import Foundation
-import Security
 
-/// Minimal Keychain wrapper for storing API keys.
+/// Stores API keys in a file within Application Support with restricted permissions.
+/// This avoids login keychain password prompts that occur with unsigned/ad-hoc builds.
+/// Keys are stored in ~/Library/Application Support/Voxa/keys.json (chmod 600).
 enum KeychainHelper {
-    private static let service = "com.voxa.agent"
+    private static var keysURL: URL {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let voxaDir = appSupport.appendingPathComponent("Voxa")
+        return voxaDir.appendingPathComponent("keys.json")
+    }
 
-    /// Save a string value to the Keychain.
+    /// Save a string value.
     @discardableResult
     static func save(key: String, value: String) -> Bool {
-        guard let data = value.data(using: .utf8) else { return false }
-
-        // Delete existing item first
-        delete(key: key)
-
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key,
-            kSecValueData as String: data,
-        ]
-
-        let status = SecItemAdd(query as CFDictionary, nil)
-        return status == errSecSuccess
+        var store = loadStore()
+        store[key] = value
+        return writeStore(store)
     }
 
-    /// Load a string value from the Keychain.
+    /// Load a string value.
     static func load(key: String) -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-        ]
-
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-
-        guard status == errSecSuccess, let data = result as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
+        let store = loadStore()
+        return store[key]
     }
 
-    /// Delete a value from the Keychain.
+    /// Delete a value.
     @discardableResult
     static func delete(key: String) -> Bool {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key,
-        ]
+        var store = loadStore()
+        store.removeValue(forKey: key)
+        return writeStore(store)
+    }
 
-        let status = SecItemDelete(query as CFDictionary)
-        return status == errSecSuccess || status == errSecItemNotFound
+    // MARK: - Private
+
+    private static func loadStore() -> [String: String] {
+        guard let data = try? Data(contentsOf: keysURL),
+              let dict = try? JSONDecoder().decode([String: String].self, from: data) else {
+            return [:]
+        }
+        return dict
+    }
+
+    private static func writeStore(_ store: [String: String]) -> Bool {
+        let dir = keysURL.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+
+        guard let data = try? JSONEncoder().encode(store) else { return false }
+
+        do {
+            try data.write(to: keysURL, options: .atomic)
+            // Restrict permissions to owner only (chmod 600)
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o600],
+                ofItemAtPath: keysURL.path
+            )
+            return true
+        } catch {
+            print("[KeychainHelper] Failed to write keys: \(error)")
+            return false
+        }
     }
 }

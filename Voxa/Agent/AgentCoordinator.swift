@@ -1,7 +1,7 @@
 import Foundation
 
 /// The bridge between the existing Voxa dictation pipeline and the agent module.
-/// Borrows references to AudioEngine and TranscriptionEngine from AppState.
+/// Manages ChatSession lifecycle, routes through AgentExecutor, and updates AgentPanel.
 @Observable
 final class AgentCoordinator {
     let providerManager: LLMProviderManager
@@ -9,12 +9,13 @@ final class AgentCoordinator {
 
     private let audioEngine: AudioEngine
     private let transcriptionEngine: TranscriptionEngine
+    private let executor: AgentExecutor
+
+    /// The active chat session (persists across hotkey presses until reset).
+    private(set) var session: ChatSession
 
     /// Whether agent mode is currently active (recording).
     private(set) var isActive = false
-
-    /// Maximum number of tool call iterations before forcing a stop.
-    private let maxToolIterations = 5
 
     init(audioEngine: AudioEngine, transcriptionEngine: TranscriptionEngine) {
         self.audioEngine = audioEngine
@@ -22,6 +23,20 @@ final class AgentCoordinator {
         self.providerManager = LLMProviderManager()
         self.toolRegistry = ToolRegistry()
         self.toolRegistry.registerBuiltinTools()
+        self.session = ChatSession()
+        self.executor = AgentExecutor(providerManager: providerManager, toolRegistry: toolRegistry)
+
+        // Wire up new session request from panel UI
+        AgentPanel.shared.state.requestNewSession = { [weak self] in
+            self?.resetSession()
+        }
+    }
+
+    // MARK: - Session Management
+
+    func resetSession() {
+        session = ChatSession()
+        AgentPanel.shared.showStatus("New session started. How can I help?")
     }
 
     // MARK: - Hotkey Handlers
@@ -33,16 +48,11 @@ final class AgentCoordinator {
         appState.status = .listening
         print("[AgentCoordinator] Hotkey down — recording")
 
-        do {
-            try audioEngine.startRecording()
-        } catch {
-            print("[AgentCoordinator] Failed to start recording: \(error)")
-            isActive = false
-            appState.status = .idle
-        }
+        AgentPanel.shared.showListening()
+        audioEngine.startRecording()
     }
 
-    /// Called when the agent hotkey is released — stop recording, transcribe, send to LLM.
+    /// Called when the agent hotkey is released — stop recording, transcribe, send to agent.
     func onHotkeyUp(appState: AppState) {
         guard isActive else { return }
         isActive = false
@@ -51,6 +61,8 @@ final class AgentCoordinator {
 
         let buffer = audioEngine.getBufferAndClear()
         audioEngine.stopRecording()
+
+        AgentPanel.shared.showProcessing()
 
         Task {
             await processVoiceInput(buffer: buffer, appState: appState)
@@ -62,7 +74,10 @@ final class AgentCoordinator {
     private func processVoiceInput(buffer: [Float], appState: AppState) async {
         guard !buffer.isEmpty else {
             print("[AgentCoordinator] Empty audio buffer")
-            await MainActor.run { appState.status = .idle }
+            await MainActor.run {
+                appState.status = .idle
+                AgentPanel.shared.dismiss()
+            }
             return
         }
 
@@ -72,79 +87,59 @@ final class AgentCoordinator {
             print("[AgentCoordinator] Transcript: \(transcript)")
 
             guard !transcript.isEmpty else {
-                await MainActor.run { appState.status = .idle }
+                await MainActor.run {
+                    appState.status = .idle
+                    AgentPanel.shared.dismiss()
+                }
                 return
             }
 
-            guard let provider = providerManager.activeProvider else {
-                print("[AgentCoordinator] No active LLM provider")
-                await MainActor.run { appState.status = .idle }
+            // Check for system control intents before full processing
+            let intent = IntentClassifier.classify(transcript)
+            if case .systemControl(let action) = intent {
+                handleSystemControl(action, appState: appState)
                 return
             }
 
-            let toolDefinitions = toolRegistry.enabledDefinitions
-            let hasTools = !toolDefinitions.isEmpty
+            // Process through the agent executor
+            let response = try await executor.process(transcript: transcript, session: session)
 
-            var messages: [ChatMessage] = [
-                ChatMessage(role: .system, content: buildSystemPrompt(hasTools: hasTools)),
-                ChatMessage(role: .user, content: transcript),
-            ]
+            await MainActor.run {
+                // Show response in panel
+                AgentPanel.shared.showResponse(response, session: self.session)
+                AgentPanel.shared.clearToolExecution()
 
-            let model = providerManager.activeModel
-
-            // Tool execution loop
-            for iteration in 0..<maxToolIterations {
-                let response = try await provider.chat(
-                    messages: messages,
-                    model: model,
-                    tools: hasTools ? toolDefinitions : nil,
-                    timeout: 30
-                )
-
-                // Check if LLM wants to call tools
-                guard response.finishReason == .toolCalls,
-                      let toolCalls = response.message.toolCalls,
-                      !toolCalls.isEmpty else {
-                    // No tool calls — we have the final response
-                    if let content = response.message.content {
-                        print("[AgentCoordinator] LLM response: \(content)")
-                    }
-                    break
+                // Inject text if needed
+                if let injectText = response.injectText {
+                    TextInjector.inject(injectText)
                 }
 
-                print("[AgentCoordinator] Tool loop iteration \(iteration + 1): \(toolCalls.count) tool call(s)")
-
-                // Append assistant message with tool calls
-                messages.append(response.message)
-
-                // Execute each tool call and append results
-                for toolCall in toolCalls {
-                    print("[AgentCoordinator] Executing tool: \(toolCall.name)")
-                    let toolResult = try await toolRegistry.execute(toolCall)
-                    print("[AgentCoordinator] Tool result (\(toolCall.name)): \(toolResult.isError ? "ERROR" : "OK") — \(String(toolResult.output.prefix(200)))")
-
-                    messages.append(ChatMessage(
-                        role: .tool,
-                        content: toolResult.output,
-                        toolCallId: toolCall.id
-                    ))
-                }
+                appState.lastTranscription = transcript
+                appState.status = .idle
             }
 
-            await MainActor.run { appState.status = .idle }
+            print("[AgentCoordinator] Response: \(response.displayText.prefix(200))")
+
         } catch {
             print("[AgentCoordinator] Error: \(error)")
-            await MainActor.run { appState.status = .idle }
+            await MainActor.run {
+                appState.status = .idle
+                AgentPanel.shared.showStatus("Error: \(error.localizedDescription)")
+            }
         }
     }
 
-    // MARK: - Helpers
+    // MARK: - System Control
 
-    private func buildSystemPrompt(hasTools: Bool) -> String {
-        var prompt = "You are a helpful voice assistant running on macOS. Respond concisely."
-        if hasTools {
-            prompt += " You have access to tools that can interact with the user's Mac. Use them when the user's request requires taking action on their computer. If a task can be done with a tool, use it rather than just describing the steps."
+    private func handleSystemControl(_ action: Intent.SystemControlAction, appState: AppState) {
+        Task { @MainActor in
+            switch action {
+            case .stop, .cancel:
+                AgentPanel.shared.dismiss()
+            case .reset, .newSession:
+                resetSession()
+            }
+            appState.status = .idle
         }
-        return prompt
     }
 }

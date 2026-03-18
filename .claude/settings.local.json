@@ -31,7 +31,27 @@
       "Bash(find ~/Library/Developer/Xcode/DerivedData/Voxa-*/SourcePackages/checkouts/FluidAudio/Sources/FluidAudio -name \"*.swift\")",
       "Bash(defaults delete:*)",
       "WebFetch(domain:openclawconsult.com)",
-      "Bash(find /Users/rohitranjan/my/projects/voxa/Voxa/Agent -type f -name *.swift)"
+      "Bash(find /Users/rohitranjan/my/projects/voxa/Voxa/Agent -type f -name *.swift)",
+      "WebFetch(domain:machinelearningmastery.com)",
+      "WebFetch(domain:www.freecodecamp.org)",
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:blogs.oracle.com)",
+      "WebFetch(domain:skywork.ai)",
+      "WebFetch(domain:aws.amazon.com)",
+      "WebFetch(domain:mykin.ai)",
+      "WebFetch(domain:dl.acm.org)",
+      "WebFetch(domain:gonzoml.substack.com)",
+      "WebFetch(domain:manthanguptaa.in)",
+      "WebFetch(domain:danielmiessler.com)",
+      "WebFetch(domain:www.anthropic.com)",
+      "WebFetch(domain:developers.openai.com)",
+      "WebFetch(domain:thenewstack.io)",
+      "WebFetch(domain:www.hume.ai)",
+      "WebFetch(domain:www.letta.com)",
+      "Bash(xcodebuild -project Voxa.xcodeproj -scheme Voxa -configuration Debug clean build)",
+      "Bash(curl -s http://localhost:11434/api/tags)",
+      "Bash(python3 -c \"import sys,json; [print\\(m[''''name'''']\\) for m in json.load\\(sys.stdin\\).get\\(''''models'''',[]\\)]\")",
+      "Bash(defaults read:*)"
     ]
   }
 }
