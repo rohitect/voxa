@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(brew install:*)",
+      "Bash(xcodegen generate:*)",
+      "Bash(xcodebuild -project Voxa.xcodeproj -scheme Voxa -arch arm64 build)",
+      "Read(//Applications/**)",
+      "Bash(xcode-select -p)",
+      "Bash(mdfind:*)",
+      "Bash(sudo xcode-select:*)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project Voxa.xcodeproj -scheme Voxa -arch arm64 build)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift -typecheck Voxa/Utilities/Constants.swift 2>&1)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(gh api:*)",
+      "Bash(grep -E '\\\\.swift$')",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project /Users/rohitranjan/my/projects/voxa/Voxa.xcodeproj -scheme Voxa -arch arm64 build)",
+      "Bash(xxd)",
+      "WebFetch(domain:macpaw.com)",
+      "Bash(wc -l /Users/rohitranjan/my/projects/voxa/Voxa/**/*.swift)",
+      "WebFetch(domain:openclaw.ai)"
+    ]
+  }
+}

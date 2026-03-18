@@ -1,0 +1,36 @@
+name: Voxa
+options:
+  bundleIdPrefix: com.voxa
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "16.0"
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    ARCHS: arm64
+    VALID_ARCHS: arm64
+    PRODUCT_NAME: Voxa
+
+packages:
+  WhisperKit:
+    url: https://github.com/argmaxinc/WhisperKit
+    from: "0.9.0"
+
+targets:
+  Voxa:
+    type: application
+    platform: macOS
+    sources:
+      - Voxa
+    dependencies:
+      - package: WhisperKit
+    settings:
+      base:
+        INFOPLIST_FILE: Voxa/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Voxa/Voxa.entitlements
+        PRODUCT_BUNDLE_IDENTIFIER: com.voxa.app
+        SWIFT_VERSION: "5.9"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        ARCHS: arm64
+        VALID_ARCHS: arm64
