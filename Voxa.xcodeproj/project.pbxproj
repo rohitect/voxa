@@ -59,6 +59,20 @@
 		AA22232425262728 /* AgentExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22232425262728 /* AgentExecutor.swift */; };
 		AA23242526272829 /* AgentPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB23242526272829 /* AgentPanel.swift */; };
 		AA24252627282930 /* AgentPanelContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB24252627282930 /* AgentPanelContent.swift */; };
+		DD01010101010101 /* MCPServerConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC01010101010101 /* MCPServerConfig.swift */; };
+		DD02020202020202 /* MCPTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC02020202020202 /* MCPTypes.swift */; };
+		DD03030303030303 /* MCPConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC03030303030303 /* MCPConnection.swift */; };
+		DD04040404040404 /* MCPToolAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC04040404040404 /* MCPToolAdapter.swift */; };
+		DD05050505050505 /* MCPManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC05050505050505 /* MCPManager.swift */; };
+		DD06060606060606 /* MCPSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC06060606060606 /* MCPSettingsView.swift */; };
+		DD07070707070707 /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = CC09090909090909 /* MCP */; };
+		DD08080808080808 /* AgentChatPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC10101010101010 /* AgentChatPage.swift */; };
+		DD09090909090909 /* ConversationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11111111111111 /* ConversationStore.swift */; };
+		FF01010101010101 /* SubAgentDefinition.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE01010101010101 /* SubAgentDefinition.swift */; };
+		FF02020202020202 /* SubAgentRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE02020202020202 /* SubAgentRunner.swift */; };
+		FF03030303030303 /* SubAgentManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE03030303030303 /* SubAgentManager.swift */; };
+		FF04040404040404 /* DelegateToAgentTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE04040404040404 /* DelegateToAgentTool.swift */; };
+		FF05050505050505 /* SubAgentSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE05050505050505 /* SubAgentSettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -115,6 +129,19 @@
 		BB22232425262728 /* AgentExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentExecutor.swift; sourceTree = "<group>"; };
 		BB23242526272829 /* AgentPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentPanel.swift; sourceTree = "<group>"; };
 		BB24252627282930 /* AgentPanelContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentPanelContent.swift; sourceTree = "<group>"; };
+		CC01010101010101 /* MCPServerConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServerConfig.swift; sourceTree = "<group>"; };
+		CC02020202020202 /* MCPTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPTypes.swift; sourceTree = "<group>"; };
+		CC03030303030303 /* MCPConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPConnection.swift; sourceTree = "<group>"; };
+		CC04040404040404 /* MCPToolAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPToolAdapter.swift; sourceTree = "<group>"; };
+		CC05050505050505 /* MCPManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPManager.swift; sourceTree = "<group>"; };
+		CC06060606060606 /* MCPSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPSettingsView.swift; sourceTree = "<group>"; };
+		CC10101010101010 /* AgentChatPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentChatPage.swift; sourceTree = "<group>"; };
+		CC11111111111111 /* ConversationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationStore.swift; sourceTree = "<group>"; };
+		EE01010101010101 /* SubAgentDefinition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubAgentDefinition.swift; sourceTree = "<group>"; };
+		EE02020202020202 /* SubAgentRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubAgentRunner.swift; sourceTree = "<group>"; };
+		EE03030303030303 /* SubAgentManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubAgentManager.swift; sourceTree = "<group>"; };
+		EE04040404040404 /* DelegateToAgentTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DelegateToAgentTool.swift; sourceTree = "<group>"; };
+		EE05050505050505 /* SubAgentSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubAgentSettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -124,6 +151,7 @@
 			files = (
 				C0FBFF9FB00D764D693257CD /* WhisperKit in Frameworks */,
 				2B3C4D5E6F7A8B9C0D1E2F3A /* FluidAudio in Frameworks */,
+				DD07070707070707 /* MCP in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -188,13 +216,16 @@
 		AF9C450FE148B7CC1BA230CD /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				CC10101010101010 /* AgentChatPage.swift */,
 				BB23242526272829 /* AgentPanel.swift */,
 				BB24252627282930 /* AgentPanelContent.swift */,
 				3D5738B6DCBF246FDD10B1A8 /* FloatingIndicator.swift */,
+				CC06060606060606 /* MCPSettingsView.swift */,
 				7B81DE9FD96DC94636D6C28A /* MenuBarView.swift */,
 				CB859B3D0A611EC208E91D51 /* ModelDownloadView.swift */,
 				08EC3F1EB29314EEF956810C /* OnboardingView.swift */,
 				4D27B961265B9D4798FDDC89 /* SettingsView.swift */,
+				EE05050505050505 /* SubAgentSettingsView.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -240,6 +271,18 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
+		CC07070707070707 /* MCP */ = {
+			isa = PBXGroup;
+			children = (
+				CC03030303030303 /* MCPConnection.swift */,
+				CC05050505050505 /* MCPManager.swift */,
+				CC01010101010101 /* MCPServerConfig.swift */,
+				CC04040404040404 /* MCPToolAdapter.swift */,
+				CC02020202020202 /* MCPTypes.swift */,
+			);
+			path = MCP;
+			sourceTree = "<group>";
+		};
 		CC10111213141516 /* Agent */ = {
 			isa = PBXGroup;
 			children = (
@@ -247,8 +290,11 @@
 				BB22232425262728 /* AgentExecutor.swift */,
 				BB19202122232425 /* AgentResponse.swift */,
 				BB21222324252627 /* ChatSession.swift */,
+				CC11111111111111 /* ConversationStore.swift */,
 				BB20212223242526 /* IntentClassifier.swift */,
 				CC20212223242526 /* LLM */,
+				CC07070707070707 /* MCP */,
+				EE10101010101010 /* SubAgents */,
 				CC40414243444546 /* Tools */,
 				CC30313233343536 /* Utilities */,
 			);
@@ -301,6 +347,17 @@
 			path = Utilities;
 			sourceTree = "<group>";
 		};
+		EE10101010101010 /* SubAgents */ = {
+			isa = PBXGroup;
+			children = (
+				EE04040404040404 /* DelegateToAgentTool.swift */,
+				EE01010101010101 /* SubAgentDefinition.swift */,
+				EE03030303030303 /* SubAgentManager.swift */,
+				EE02020202020202 /* SubAgentRunner.swift */,
+			);
+			path = SubAgents;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -320,6 +377,7 @@
 			packageProductDependencies = (
 				3427E9DA792E8FE869A23A1B /* WhisperKit */,
 				4D5E6F7A8B9C0D1E2F3A4B5C /* FluidAudio */,
+				CC09090909090909 /* MCP */,
 			);
 			productName = Voxa;
 			productReference = C19EC1FC8BBC2C5090B92A07 /* Voxa.app */;
@@ -348,6 +406,7 @@
 			packageReferences = (
 				A733BB27433287A629A7FA49 /* XCRemoteSwiftPackageReference "WhisperKit" */,
 				5E6F7A8B9C0D1E2F3A4B5C6D /* XCRemoteSwiftPackageReference "FluidAudio" */,
+				CC08080808080808 /* XCRemoteSwiftPackageReference "swift-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1D21D1D46F5ACBE89EA488D3 /* Products */;
@@ -424,6 +483,19 @@
 				AA22232425262728 /* AgentExecutor.swift in Sources */,
 				AA23242526272829 /* AgentPanel.swift in Sources */,
 				AA24252627282930 /* AgentPanelContent.swift in Sources */,
+				DD01010101010101 /* MCPServerConfig.swift in Sources */,
+				DD02020202020202 /* MCPTypes.swift in Sources */,
+				DD03030303030303 /* MCPConnection.swift in Sources */,
+				DD04040404040404 /* MCPToolAdapter.swift in Sources */,
+				DD05050505050505 /* MCPManager.swift in Sources */,
+				DD06060606060606 /* MCPSettingsView.swift in Sources */,
+				DD08080808080808 /* AgentChatPage.swift in Sources */,
+				DD09090909090909 /* ConversationStore.swift in Sources */,
+				FF01010101010101 /* SubAgentDefinition.swift in Sources */,
+				FF02020202020202 /* SubAgentRunner.swift in Sources */,
+				FF03030303030303 /* SubAgentManager.swift in Sources */,
+				FF04040404040404 /* DelegateToAgentTool.swift in Sources */,
+				FF05050505050505 /* SubAgentSettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -633,6 +705,14 @@
 				minimumVersion = 0.12.4;
 			};
 		};
+		CC08080808080808 /* XCRemoteSwiftPackageReference "swift-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/modelcontextprotocol/swift-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.11.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -645,6 +725,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 5E6F7A8B9C0D1E2F3A4B5C6D /* XCRemoteSwiftPackageReference "FluidAudio" */;
 			productName = FluidAudio;
+		};
+		CC09090909090909 /* MCP */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CC08080808080808 /* XCRemoteSwiftPackageReference "swift-sdk" */;
+			productName = MCP;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

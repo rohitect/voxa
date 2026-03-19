@@ -74,7 +74,12 @@ struct OllamaProvider: LLMProvider {
                     request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
                     let (bytes, response) = try await URLSession.shared.bytes(for: request)
-                    try validateHTTPResponse(response)
+                    if let http = response as? HTTPURLResponse, !(200..<300 ~= http.statusCode) {
+                        // Read the error body for better diagnostics
+                        var errorBody = ""
+                        for try await line in bytes.lines { errorBody += line }
+                        throw LLMError.httpError(statusCode: http.statusCode, message: errorBody.isEmpty ? nil : String(errorBody.prefix(500)))
+                    }
 
                     for try await line in bytes.lines {
                         guard let lineData = line.data(using: .utf8),
@@ -88,10 +93,17 @@ struct OllamaProvider: LLMProvider {
 
                         let toolCalls = parseToolCalls(from: messageDict)
 
+                        let finishReason: ChatResponse.FinishReason?
+                        if done {
+                            finishReason = (toolCalls != nil && !toolCalls!.isEmpty) ? .toolCalls : .stop
+                        } else {
+                            finishReason = nil
+                        }
+
                         let chunk = ChatStreamChunk(
                             deltaContent: content,
                             deltaToolCalls: toolCalls,
-                            finishReason: done ? .stop : nil
+                            finishReason: finishReason
                         )
                         continuation.yield(chunk)
 

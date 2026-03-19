@@ -51,7 +51,14 @@
       "Bash(xcodebuild -project Voxa.xcodeproj -scheme Voxa -configuration Debug clean build)",
       "Bash(curl -s http://localhost:11434/api/tags)",
       "Bash(python3 -c \"import sys,json; [print\\(m[''''name'''']\\) for m in json.load\\(sys.stdin\\).get\\(''''models'''',[]\\)]\")",
-      "Bash(defaults read:*)"
+      "Bash(defaults read:*)",
+      "WebFetch(domain:artemnovichkov.com)",
+      "WebFetch(domain:blog.glacio.tech)",
+      "WebFetch(domain:www.inferless.com)",
+      "WebFetch(domain:deepwiki.com)",
+      "WebFetch(domain:www.bentoml.com)",
+      "WebFetch(domain:www.siliconflow.com)",
+      "Bash(find /Users/rohitranjan/my/projects/voxa -type d -name *.imageset -o -type d -name *.appiconset)"
     ]
   }
 }

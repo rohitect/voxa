@@ -5,6 +5,7 @@ import ServiceManagement
 
 enum SettingsPage: String, CaseIterable, Identifiable {
     case home = "Home"
+    case chat = "Chat"
     case dictionary = "Dictionary"
     case snippets = "Snippets"
     case models = "Models"
@@ -16,6 +17,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .home: return "house"
+        case .chat: return "bubble.left.and.bubble.right"
         case .dictionary: return "character.book.closed"
         case .snippets: return "text.quote"
         case .models: return "cpu"
@@ -107,6 +109,8 @@ struct SettingsView: View {
         switch selectedPage {
         case .home:
             HomePage(appState: appState)
+        case .chat:
+            AgentChatPage(appState: appState)
         case .dictionary:
             DictionaryPage()
         case .snippets:
@@ -776,6 +780,11 @@ private struct AgentSettingsPage: View {
                         .padding(.horizontal, 12)
                 }
 
+                // MCP Servers
+                SettingsSection(title: "MCP Servers") {
+                    MCPSettingsView(mcpManager: appState.agentCoordinator.mcpManager)
+                }
+
                 // Tools
                 SettingsSection(title: "Tools") {
                     ForEach(appState.agentCoordinator.toolRegistry.allTools, id: \.name) { tool in
@@ -796,6 +805,11 @@ private struct AgentSettingsPage: View {
                             }
                         }
                     }
+                }
+
+                // Sub-Agents
+                SettingsSection(title: "Sub-Agents") {
+                    SubAgentSettingsView(subAgentManager: appState.agentCoordinator.subAgentManager)
                 }
             }
             .padding(24)
@@ -913,7 +927,7 @@ private struct SettingsPage_: View {
 
 // MARK: - Settings Helpers
 
-private struct SettingsSection<Content: View>: View {
+struct SettingsSection<Content: View>: View {
     let title: String
     @ViewBuilder let content: Content
 
@@ -933,7 +947,7 @@ private struct SettingsSection<Content: View>: View {
     }
 }
 
-private struct SettingsRow<Content: View>: View {
+struct SettingsRow<Content: View>: View {
     let label: String
     @ViewBuilder let content: Content
 

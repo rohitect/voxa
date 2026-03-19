@@ -2,7 +2,7 @@ import Foundation
 
 /// Manages a multi-turn chat session with message history and context trimming.
 @Observable
-final class ChatSession {
+final class ChatSession: Identifiable {
     /// All messages in the session, including system, user, assistant, and tool messages.
     private(set) var messages: [ChatMessage] = []
 
@@ -30,10 +30,18 @@ final class ChatSession {
     private let maxMessages = 40
 
     /// Unique session identifier.
-    let id = UUID()
+    let id: UUID
 
     /// When this session was created.
-    let createdAt = Date()
+    let createdAt: Date
+
+    /// Conversation title (auto-generated from first user message).
+    var title: String = "New Chat"
+
+    init(id: UUID = UUID(), createdAt: Date = Date()) {
+        self.id = id
+        self.createdAt = createdAt
+    }
 
     /// Whether the session has any user/assistant exchanges.
     var hasHistory: Bool {
@@ -49,6 +57,11 @@ final class ChatSession {
     }
 
     func addUserMessage(_ content: String) {
+        // Auto-title from first user message
+        if title == "New Chat" {
+            let truncated = content.prefix(50)
+            title = truncated.count < content.count ? "\(truncated)..." : String(truncated)
+        }
         messages.append(ChatMessage(role: .user, content: content))
         trimIfNeeded()
     }

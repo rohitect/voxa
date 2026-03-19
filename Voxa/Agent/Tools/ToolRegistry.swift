@@ -57,6 +57,17 @@ final class ToolRegistry {
         }
     }
 
+    func unregister(_ name: String) {
+        tools.removeValue(forKey: name)
+    }
+
+    func unregisterAll(prefix: String) {
+        let keysToRemove = tools.keys.filter { $0.hasPrefix(prefix) }
+        for key in keysToRemove {
+            tools.removeValue(forKey: key)
+        }
+    }
+
     func registerBuiltinTools() {
         register(SystemSettingsTool())
         register(ClipboardTool())

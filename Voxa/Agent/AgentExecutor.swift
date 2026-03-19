@@ -1,10 +1,26 @@
 import Foundation
 
-/// Core agentic loop: classify intent → execute tools → LLM response.
+/// Callbacks for live UI updates during agent execution.
+struct AgentCallbacks: Sendable {
+    /// Called with each text delta from the LLM stream.
+    let onStreamDelta: @Sendable (String) async -> Void
+    /// Called when a tool starts executing.
+    let onToolStart: @Sendable (String) async -> Void
+    /// Called when a tool finishes executing.
+    let onToolEnd: @Sendable (String, Bool) async -> Void
+
+    static let none = AgentCallbacks(
+        onStreamDelta: { _ in },
+        onToolStart: { _ in },
+        onToolEnd: { _, _ in }
+    )
+}
+
+/// Core agentic loop: classify intent → stream LLM → execute tools → loop.
 final class AgentExecutor {
     private let providerManager: LLMProviderManager
     private let toolRegistry: ToolRegistry
-    private let maxToolIterations = 5
+    private let maxToolIterations = 10
 
     init(providerManager: LLMProviderManager, toolRegistry: ToolRegistry) {
         self.providerManager = providerManager
@@ -12,21 +28,18 @@ final class AgentExecutor {
     }
 
     /// Process a transcript through the agent pipeline.
-    func process(transcript: String, session: ChatSession) async throws -> AgentResponse {
+    func process(
+        transcript: String,
+        session: ChatSession,
+        callbacks: AgentCallbacks = .none
+    ) async throws -> AgentResponse {
         let intent = IntentClassifier.classify(transcript)
 
         switch intent {
         case .systemControl(let action):
             return handleSystemControl(action, session: session)
-
-        case .dictation:
-            return .injection(transcript, display: "Dictated: \(transcript)")
-
-        case .textRewrite(let text, let command):
-            return try await handleRewrite(text: text, command: command, session: session)
-
-        case .toolInvocation, .agentChat:
-            return try await handleAgentChat(transcript: transcript, session: session)
+        case .agentChat:
+            return try await handleAgentChat(transcript: transcript, session: session, callbacks: callbacks)
         }
     }
 
@@ -42,39 +55,21 @@ final class AgentExecutor {
         }
     }
 
-    // MARK: - Text Rewrite
+    // MARK: - Agent Chat (streaming with tool loop)
 
-    private func handleRewrite(text: String, command: String, session: ChatSession) async throws -> AgentResponse {
-        guard let provider = providerManager.activeProvider else {
-            return .chat("No LLM provider configured.")
-        }
-
-        let rewriteMessages = [
-            ChatMessage(role: .system, content: "Rewrite the given text according to the user's instruction. Output ONLY the rewritten text."),
-            ChatMessage(role: .user, content: "Text: \(text)\n\nInstruction: \(command)"),
-        ]
-
-        let model = providerManager.activeModel
-        let response = try await provider.chat(messages: rewriteMessages, model: model, timeout: 10)
-
-        if let content = response.message.content {
-            return .injection(content, display: "Rewrote text")
-        }
-
-        return .chat("Failed to rewrite text.")
-    }
-
-    // MARK: - Agent Chat (with tool loop)
-
-    private func handleAgentChat(transcript: String, session: ChatSession) async throws -> AgentResponse {
+    private func handleAgentChat(
+        transcript: String,
+        session: ChatSession,
+        callbacks: AgentCallbacks
+    ) async throws -> AgentResponse {
         guard let provider = providerManager.activeProvider else {
             return .chat("No LLM provider configured. Go to Settings > Agent to set one up.")
         }
 
-        // Update system prompt with current tool definitions
+        // Update system prompt with current tool info
         let toolDefs = toolRegistry.enabledDefinitions
         let hasTools = !toolDefs.isEmpty
-        session.setSystemPrompt(buildSystemPrompt(hasTools: hasTools))
+        session.setSystemPrompt(buildSystemPrompt(toolNames: hasTools ? toolDefs.map(\.name) : []))
 
         // Add user message
         session.addUserMessage(transcript)
@@ -82,21 +77,27 @@ final class AgentExecutor {
         let model = providerManager.activeModel
         var toolsUsed: [String] = []
 
-        // Tool execution loop
+        // Agentic tool loop
         for iteration in 0..<maxToolIterations {
-            let response = try await provider.chat(
+            try Task.checkCancellation()
+
+            // Stream LLM response
+            let response = try await streamLLMResponse(
+                provider: provider,
                 messages: session.llmMessages,
                 model: model,
                 tools: hasTools ? toolDefs : nil,
-                timeout: 30
+                callbacks: callbacks
             )
+
+            // Add assistant message to session
+            session.addAssistantMessage(response.message)
 
             // Check if LLM wants to call tools
             guard response.finishReason == .toolCalls,
                   let toolCalls = response.message.toolCalls,
                   !toolCalls.isEmpty else {
-                // No tool calls — we have the final response
-                session.addAssistantMessage(response.message)
+                // Final text response
                 let content = response.message.content ?? ""
                 if toolsUsed.isEmpty {
                     return .chat(content)
@@ -107,33 +108,155 @@ final class AgentExecutor {
 
             print("[AgentExecutor] Iteration \(iteration + 1): \(toolCalls.count) tool call(s)")
 
-            // Append assistant message with tool calls
-            session.addAssistantMessage(response.message)
+            // Execute tools — parallel when multiple, sequential when single
+            let results: [(ToolCall, ToolResult)]
+            if toolCalls.count == 1 {
+                let call = toolCalls[0]
+                await callbacks.onToolStart(call.name)
+                let result = await executeToolSafely(call)
+                await callbacks.onToolEnd(call.name, result.isError)
+                results = [(call, result)]
+            } else {
+                results = await executeToolsInParallel(toolCalls, callbacks: callbacks)
+            }
 
-            // Execute each tool call
-            for toolCall in toolCalls {
-                print("[AgentExecutor] Executing: \(toolCall.name)")
-                let result = try await toolRegistry.execute(toolCall)
-                session.addToolResult(content: result.output, toolCallId: toolCall.id)
-                toolsUsed.append(toolCall.name)
-                print("[AgentExecutor] Result: \(result.isError ? "ERROR" : "OK")")
+            // Add results to session (truncate large outputs to avoid exceeding LLM context)
+            for (call, result) in results {
+                let truncated = Self.truncateToolOutput(result.output)
+                session.addToolResult(content: truncated, toolCallId: call.id)
+                toolsUsed.append(call.name)
+                print("[AgentExecutor] \(call.name): \(result.isError ? "ERROR" : "OK") (\(result.output.count) chars)")
             }
         }
 
-        // If we hit max iterations, return what we have
-        let lastAssistant = session.messages.last { $0.role == .assistant }
-        let content = lastAssistant?.content ?? "I used several tools but couldn't complete the task within the iteration limit."
+        // Hit max iterations — ask LLM for a summary of what happened
+        let content = "I used several tools but couldn't complete the task within \(maxToolIterations) iterations."
         return .withTools(content, tools: toolsUsed)
+    }
+
+    // MARK: - Streaming
+
+    private func streamLLMResponse(
+        provider: any LLMProvider,
+        messages: [ChatMessage],
+        model: String,
+        tools: [ToolDefinition]?,
+        callbacks: AgentCallbacks
+    ) async throws -> ChatResponse {
+        var accumulatedContent = ""
+        var accumulatedToolCalls: [ToolCall] = []
+        var lastFinishReason: ChatResponse.FinishReason?
+
+        let stream = provider.chatStream(
+            messages: messages,
+            model: model,
+            tools: tools,
+            timeout: 60
+        )
+
+        for try await chunk in stream {
+            try Task.checkCancellation()
+
+            if let delta = chunk.deltaContent, !delta.isEmpty {
+                accumulatedContent += delta
+                await callbacks.onStreamDelta(delta)
+            }
+            if let toolCalls = chunk.deltaToolCalls {
+                accumulatedToolCalls.append(contentsOf: toolCalls)
+            }
+            if let reason = chunk.finishReason {
+                lastFinishReason = reason
+            }
+        }
+
+        // Determine finish reason
+        let finishReason: ChatResponse.FinishReason
+        if !accumulatedToolCalls.isEmpty {
+            finishReason = .toolCalls
+        } else {
+            finishReason = lastFinishReason ?? .stop
+        }
+
+        let message = ChatMessage(
+            role: .assistant,
+            content: accumulatedContent.isEmpty ? nil : accumulatedContent,
+            toolCalls: accumulatedToolCalls.isEmpty ? nil : accumulatedToolCalls
+        )
+
+        return ChatResponse(message: message, finishReason: finishReason, usage: nil)
+    }
+
+    // MARK: - Tool Execution
+
+    /// Execute a single tool call, catching all errors.
+    private func executeToolSafely(_ toolCall: ToolCall) async -> ToolResult {
+        do {
+            return try await toolRegistry.execute(toolCall)
+        } catch {
+            return .error("Tool '\(toolCall.name)' threw: \(error.localizedDescription)")
+        }
+    }
+
+    /// Execute multiple tool calls in parallel using a TaskGroup.
+    private func executeToolsInParallel(
+        _ toolCalls: [ToolCall],
+        callbacks: AgentCallbacks
+    ) async -> [(ToolCall, ToolResult)] {
+        // Use a dictionary to collect results since TaskGroup may return in any order
+        let resultPairs = await withTaskGroup(
+            of: (Int, ToolCall, ToolResult).self,
+            returning: [(ToolCall, ToolResult)].self
+        ) { group in
+            for (index, call) in toolCalls.enumerated() {
+                group.addTask {
+                    await callbacks.onToolStart(call.name)
+                    let result = await self.executeToolSafely(call)
+                    await callbacks.onToolEnd(call.name, result.isError)
+                    return (index, call, result)
+                }
+            }
+
+            var collected: [(Int, ToolCall, ToolResult)] = []
+            for await entry in group {
+                collected.append(entry)
+            }
+            // Return in original order
+            return collected.sorted { $0.0 < $1.0 }.map { ($0.1, $0.2) }
+        }
+
+        return resultPairs
+    }
+
+    // MARK: - Output Truncation
+
+    /// Truncate tool output to avoid exceeding LLM context limits.
+    private static let maxToolOutputChars = 4000
+
+    private static func truncateToolOutput(_ output: String) -> String {
+        guard output.count > maxToolOutputChars else { return output }
+        let truncated = String(output.prefix(maxToolOutputChars))
+        return truncated + "\n\n[Output truncated — \(output.count) total characters. First \(maxToolOutputChars) shown.]"
     }
 
     // MARK: - System Prompt
 
-    private func buildSystemPrompt(hasTools: Bool) -> String {
-        var prompt = "You are a helpful voice assistant running on macOS. Respond concisely and naturally."
-        if hasTools {
-            prompt += " You have access to tools that can interact with the user's Mac. Use them when the user's request requires taking action on their computer. If a task can be done with a tool, use it rather than just describing the steps."
+    private func buildSystemPrompt(toolNames: [String]) -> String {
+        var prompt = """
+        You are Voxa, a voice-controlled AI assistant running on macOS. \
+        You help users accomplish tasks on their Mac through voice commands.
+        """
+
+        if !toolNames.isEmpty {
+            let toolList = toolNames.joined(separator: ", ")
+            prompt += """
+             You have access to the following tools: \(toolList). \
+            Use tools proactively when the user's request requires action — don't just describe steps. \
+            You can chain multiple tool calls to accomplish complex tasks. \
+            If a tool fails, analyze the error and try an alternative approach.
+            """
         }
-        prompt += " Keep responses brief — this is a voice interface."
+
+        prompt += " Keep responses concise — this is a voice interface. Be direct and actionable."
         return prompt
     }
 }

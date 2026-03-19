@@ -18,6 +18,8 @@ final class AgentPanel {
     func showListening() {
         state.isListening = true
         state.isProcessing = false
+        state.streamingText = ""
+        state.currentToolName = nil
         showPanel()
     }
 
@@ -25,12 +27,38 @@ final class AgentPanel {
     func showProcessing() {
         state.isListening = false
         state.isProcessing = true
+        state.streamingText = ""
     }
 
-    /// Show a response in the panel.
-    func showResponse(_ response: AgentResponse, session: ChatSession) {
+    /// Append a text delta from the LLM stream.
+    func appendStreamingText(_ delta: String) {
+        // Transition from processing to streaming on first delta
+        if state.isProcessing {
+            state.isProcessing = false
+        }
+        state.isStreaming = true
+        state.streamingText += delta
+    }
+
+    /// Show which tool is currently executing.
+    func showToolExecution(_ toolName: String) {
+        state.currentToolName = toolName
+        state.isProcessing = true
+        state.isStreaming = false
+        state.streamingText = ""
+    }
+
+    func clearToolExecution() {
+        state.currentToolName = nil
+    }
+
+    /// Finalize the response — transition from streaming to committed session history.
+    func finalizeResponse(_ response: AgentResponse, session: ChatSession) {
         state.isListening = false
         state.isProcessing = false
+        state.isStreaming = false
+        state.streamingText = ""
+        state.currentToolName = nil
         state.session = session
 
         if state.panelMode == .popUp {
@@ -42,6 +70,9 @@ final class AgentPanel {
     func showStatus(_ message: String) {
         state.isListening = false
         state.isProcessing = false
+        state.isStreaming = false
+        state.streamingText = ""
+        state.currentToolName = nil
         state.statusMessage = message
 
         if state.panelMode == .popUp {
@@ -49,13 +80,14 @@ final class AgentPanel {
         }
     }
 
-    /// Show tool execution status.
-    func showToolExecution(_ toolName: String) {
-        state.currentToolName = toolName
+    /// Legacy compatibility — same as finalizeResponse.
+    func showResponse(_ response: AgentResponse, session: ChatSession) {
+        finalizeResponse(response, session: session)
     }
 
-    func clearToolExecution() {
-        state.currentToolName = nil
+    /// Show the panel (for text input flow).
+    func show() {
+        showPanel()
     }
 
     func dismiss() {
@@ -144,6 +176,8 @@ final class AgentPanelState {
     var session: ChatSession?
     var isListening = false
     var isProcessing = false
+    var isStreaming = false
+    var streamingText = ""
     var statusMessage: String?
     var currentToolName: String?
 
@@ -160,6 +194,9 @@ final class AgentPanelState {
 
     /// Callback for new session request from UI.
     var requestNewSession: (() -> Void)?
+
+    /// Callback for sending a typed message.
+    var sendMessage: ((String) -> Void)?
 
     enum PanelMode: String {
         case persistent
