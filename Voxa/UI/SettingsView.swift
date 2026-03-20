@@ -55,7 +55,7 @@ struct SettingsView: View {
                     .fontWeight(.bold)
             }
             .padding(.horizontal, 16)
-            .padding(.top, 20)
+            .padding(.top, 38)
             .padding(.bottom, 24)
 
             // Nav items
@@ -536,25 +536,100 @@ private struct SnippetsPage: View {
 
 // MARK: - Agent Settings Page
 
+// MARK: - Agent Settings Tab Enum
+
+private enum AgentTab: String, CaseIterable, Identifiable {
+    case general = "General"
+    case persona = "Persona"
+    case tools = "Tools"
+    case agents = "Agents"
+    case marketplace = "Marketplace"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .general: return "gearshape"
+        case .persona: return "sparkles"
+        case .tools: return "wrench"
+        case .agents: return "person.3"
+        case .marketplace: return "bag"
+        }
+    }
+}
+
 private struct AgentSettingsPage: View {
     let appState: AppState
-    @State private var openAIKey: String = KeychainHelper.load(key: OpenAIProvider.apiKeyKeychainKey) ?? ""
-    @State private var geminiKey: String = KeychainHelper.load(key: GeminiProvider.apiKeyKeychainKey) ?? ""
-    @State private var showMainAgentMCPSheet = false
+    @State private var selectedTab: AgentTab = .general
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // Header
+        VStack(spacing: 0) {
+            // Header + Tab bar
+            VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Agent")
                         .font(.title)
                         .fontWeight(.bold)
-                    Text("Configure the AI agent LLM provider and model.")
+                    Text("Configure the AI agent, persona, tools, and sub-agents.")
                         .foregroundStyle(.secondary)
                         .font(.subheadline)
                 }
 
+                HStack(spacing: 2) {
+                    ForEach(AgentTab.allCases) { tab in
+                        Button {
+                            selectedTab = tab
+                        } label: {
+                            Label(tab.rawValue, systemImage: tab.icon)
+                                .font(.system(size: 12, weight: selectedTab == tab ? .semibold : .regular))
+                                .foregroundStyle(selectedTab == tab ? .primary : .secondary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    selectedTab == tab
+                                        ? Color.primary.opacity(0.08)
+                                        : Color.clear,
+                                    in: RoundedRectangle(cornerRadius: 6)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .padding(24)
+            .padding(.bottom, -8)
+
+            Divider().padding(.horizontal, 24)
+
+            // Tab content
+            Group {
+                switch selectedTab {
+                case .general:
+                    AgentGeneralTab(appState: appState)
+                case .persona:
+                    AgentPersonaTab(appState: appState)
+                case .tools:
+                    AgentToolsTab(appState: appState)
+                case .agents:
+                    AgentAgentsTab(appState: appState)
+                case .marketplace:
+                    MCPMarketplaceView(mcpManager: appState.agentCoordinator.mcpManager)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - General Tab
+
+private struct AgentGeneralTab: View {
+    let appState: AppState
+    @State private var openAIKey: String = KeychainHelper.load(key: OpenAIProvider.apiKeyKeychainKey) ?? ""
+    @State private var geminiKey: String = KeychainHelper.load(key: GeminiProvider.apiKeyKeychainKey) ?? ""
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
                 // Provider picker
                 SettingsSection(title: "Provider") {
                     ForEach(appState.agentCoordinator.providerManager.availableProviderNames, id: \.self) { name in
@@ -639,14 +714,73 @@ private struct AgentSettingsPage: View {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 12)
                 }
+            }
+            .padding(24)
+        }
+    }
+}
 
-                // MCP Servers
-                SettingsSection(title: "MCP Servers") {
-                    MCPSettingsView(mcpManager: appState.agentCoordinator.mcpManager)
+// MARK: - Persona Tab
+
+private struct AgentPersonaTab: View {
+    let appState: AppState
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                SettingsSection(title: "Identity & Soul") {
+                    PersonaFileRow(
+                        label: "Identity",
+                        icon: "person.text.rectangle",
+                        description: "Name, role, and vibe",
+                        content: appState.agentCoordinator.personaManager.identity,
+                        onSave: { appState.agentCoordinator.personaManager.saveIdentity($0) }
+                    )
+                    PersonaFileRow(
+                        label: "Soul",
+                        icon: "sparkles",
+                        description: "Personality, voice, and boundaries",
+                        content: appState.agentCoordinator.personaManager.soul,
+                        onSave: { appState.agentCoordinator.personaManager.saveSoul($0) }
+                    )
                 }
 
-                // Tools
-                SettingsSection(title: "Tools") {
+                SettingsSection(title: "Memory") {
+                    SettingsRow(label: "Auto-extract memories") {
+                        Toggle("", isOn: Binding(
+                            get: { appState.agentCoordinator.personaManager.autoExtract },
+                            set: { appState.agentCoordinator.personaManager.autoExtract = $0 }
+                        ))
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                    }
+                    Text("Automatically learn preferences and context from conversations.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 12)
+
+                    let memoryCount = appState.agentCoordinator.personaManager.memoryStore.entries.count
+                    SettingsRow(label: "Stored memories") {
+                        Text("\(memoryCount)")
+                            .font(.system(size: 13).monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .padding(24)
+        }
+    }
+}
+
+// MARK: - Tools Tab
+
+private struct AgentToolsTab: View {
+    let appState: AppState
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                SettingsSection(title: "Built-in Tools") {
                     ForEach(appState.agentCoordinator.toolRegistry.allTools, id: \.name) { tool in
                         SettingsRow(label: toolDisplayName(tool.name)) {
                             HStack(spacing: 6) {
@@ -667,6 +801,28 @@ private struct AgentSettingsPage: View {
                     }
                 }
 
+                SettingsSection(title: "MCP Servers") {
+                    MCPSettingsView(mcpManager: appState.agentCoordinator.mcpManager)
+                }
+            }
+            .padding(24)
+        }
+    }
+
+    private func toolDisplayName(_ name: String) -> String {
+        name.split(separator: "_").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined(separator: " ")
+    }
+}
+
+// MARK: - Agents Tab
+
+private struct AgentAgentsTab: View {
+    let appState: AppState
+    @State private var showMainAgentMCPSheet = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
                 // Main Agent
                 SettingsSection(title: "Main Agent") {
                     HStack {
@@ -716,9 +872,120 @@ private struct AgentSettingsPage: View {
             .padding(24)
         }
     }
+}
 
-    private func toolDisplayName(_ name: String) -> String {
-        name.split(separator: "_").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined(separator: " ")
+// MARK: - Persona File Row
+
+private struct PersonaFileRow: View {
+    let label: String
+    let icon: String
+    let description: String
+    let content: String
+    let onSave: (String) -> Void
+
+    @State private var showEditor = false
+
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundStyle(.secondary)
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(label).md")
+                    .font(.system(size: 13, weight: .medium))
+                Text(description)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Text("\(content.count) chars")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+
+            Button("Edit") {
+                showEditor = true
+            }
+            .font(.system(size: 11))
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .sheet(isPresented: $showEditor) {
+            PersonaFileEditor(
+                title: label,
+                initialContent: content,
+                onSave: onSave
+            )
+        }
+    }
+}
+
+// MARK: - Persona File Editor
+
+private struct PersonaFileEditor: View {
+    let title: String
+    let initialContent: String
+    let onSave: (String) -> Void
+
+    @State private var text: String = ""
+    @State private var hasChanges = false
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(title.lowercased()).md")
+                        .font(.headline)
+                    Text("~/.voxa/agent/\(title.lowercased()).md")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .textSelection(.enabled)
+                }
+
+                Spacer()
+
+                if hasChanges {
+                    Text("Unsaved changes")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+
+                Button("Save") {
+                    onSave(text)
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .disabled(!hasChanges)
+            }
+            .padding(16)
+
+            Divider()
+
+            // Editor
+            TextEditor(text: $text)
+                .font(.system(size: 13, design: .monospaced))
+                .scrollContentBackground(.hidden)
+                .padding(12)
+                .onChange(of: text) { _, newValue in
+                    hasChanges = newValue != initialContent
+                }
+        }
+        .frame(minWidth: 560, minHeight: 420)
+        .onAppear {
+            text = initialContent
+        }
     }
 }
 

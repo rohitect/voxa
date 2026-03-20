@@ -77,7 +77,25 @@
       "Bash(chmod:*)",
       "Bash(xargs basename:*)",
       "Bash(pip3 install:*)",
-      "Bash(xcodebuild -scheme Voxa -destination 'platform=macOS' build)"
+      "Bash(xcodebuild -scheme Voxa -destination 'platform=macOS' build)",
+      "Bash(find /Users/rohitranjan/my/projects/voxa -type d -name *agent* -o -type d -name *MCP*)",
+      "Bash(grep -r \"marketplace\\\\|catalog\\\\|gallery\\\\|discover\\\\|browse\" /Users/rohitranjan/my/projects/voxa/Voxa --include=*.swift)",
+      "Bash(gh search:*)",
+      "Bash(xargs ls:*)",
+      "Bash(grep -r \"mew\\\\|Mew\\\\|MEW\" /Users/rohitranjan/my/projects/voxa --include=*.swift --include=*.md --include=*.plist --include=*.json)",
+      "Bash(grep -r \"odd\\\\|Odd\\\\|ODD\" /Users/rohitranjan/my/projects/voxa --include=*.swift --include=*.md --include=*.plist --include=*.json)",
+      "WebFetch(domain:rive.app)",
+      "WebFetch(domain:www.fiverr.com)",
+      "WebFetch(domain:rivemcp.stunning.gg)",
+      "Bash(gh repo:*)",
+      "Bash(curl:*)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Bash(done)",
+      "Bash(find /Users/rohitranjan/my/projects/voxa/Voxa/UI -type f -name *Chat* -o -name *Agent*)",
+      "Bash(grep -i \"\\\\.swift$\")",
+      "WebFetch(domain:swift-ai-sdk-docs.vercel.app)",
+      "Bash(find /Users/rohitranjan/my/projects/voxa -name \"*.swift\" -exec grep -l \"\\\\.chat\\\\|\\\\.assistant\\\\|\\\\.response\\\\|streaming\\\\|animation\" {})"
     ]
   }
 }

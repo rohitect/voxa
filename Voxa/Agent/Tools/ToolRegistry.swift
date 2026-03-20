@@ -15,6 +15,10 @@ final class ToolRegistry {
     private(set) var tools: [String: any AgentTool] = [:]
     let settings = ToolSettings()
 
+    /// When true, tools execute without user confirmation (used by sub-agent runners
+    /// whose ToolRegistry is not connected to the UI).
+    var skipConfirmation = false
+
     /// The currently pending confirmation request, if any. Observed by the UI.
     var pendingConfirmation: ToolConfirmationRequest?
 
@@ -49,7 +53,8 @@ final class ToolRegistry {
         }
 
         // If tool requires confirmation, suspend and wait for user response
-        if tool.requiresConfirmation {
+        // (Sub-agent registries skip this — their UI isn't wired up and would deadlock.)
+        if tool.requiresConfirmation && !skipConfirmation {
             let approved = await requestConfirmation(toolName: tool.name, arguments: toolCall.arguments)
             guard approved else {
                 return .error("User denied execution of '\(tool.name)'")
@@ -111,6 +116,42 @@ final class ToolRegistry {
     func denyConfirmation() {
         confirmationContinuation?.resume(returning: false)
         confirmationContinuation = nil
+    }
+
+    // MARK: - Builtin Tool Factory
+
+    /// All available builtin tools, keyed by name.
+    static func builtinTool(named name: String) -> (any AgentTool)? {
+        switch name {
+        case "screen_capture":    return ScreenCaptureTool()
+        case "ui_automation":     return UIAutomationTool()
+        case "clipboard":         return ClipboardTool()
+        case "file_read":         return FileReadTool()
+        case "file_write":        return FileWriteTool()
+        case "list_directory":    return ListDirectoryTool()
+        case "file_search":       return FileSearchTool()
+        case "app_launcher":      return AppLauncherTool()
+        case "system_settings":   return SystemSettingsTool()
+        case "shell_command":     return ShellCommandTool()
+        case "applescript":       return AppleScriptTool()
+        case "mouse":             return MouseTool()
+        case "keyboard":          return KeyboardTool()
+        case "window_management": return WindowManagementTool()
+        case "file_operations":   return FileOperationsTool()
+        case "system_info":       return SystemInfoTool()
+        case "notification":      return NotificationTool()
+        case "shortcuts":         return ShortcutsTool()
+        default:                  return nil
+        }
+    }
+
+    /// Register builtin tools by name.
+    func registerBuiltinTools(_ names: [String]) {
+        for name in names {
+            if let tool = Self.builtinTool(named: name) {
+                register(tool)
+            }
+        }
     }
 
     func unregister(_ name: String) {

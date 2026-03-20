@@ -53,6 +53,7 @@ private struct ChatSidebar: View {
     let onDeleteAll: () -> Void
 
     @State private var searchText = ""
+    @State private var showClearAllConfirmation = false
 
     private var filteredGroups: [(title: String, sessions: [ChatSession])] {
         let groups = store.groupedConversations
@@ -150,7 +151,7 @@ private struct ChatSidebar: View {
     private var clearAllButton: some View {
         VStack(spacing: 0) {
             Divider().padding(.horizontal, 12)
-            Button(role: .destructive, action: onDeleteAll) {
+            Button(role: .destructive) { showClearAllConfirmation = true } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "trash")
                         .font(.caption)
@@ -161,6 +162,12 @@ private struct ChatSidebar: View {
             }
             .buttonStyle(.borderless)
             .padding(10)
+            .alert("Delete all conversations?", isPresented: $showClearAllConfirmation) {
+                Button("Delete All", role: .destructive, action: onDeleteAll)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("All conversations will be permanently deleted. This cannot be undone.")
+            }
         }
     }
 }
@@ -174,6 +181,7 @@ private struct ConversationRow: View {
     let onDelete: () -> Void
 
     @State private var isHovered = false
+    @State private var showDeleteConfirmation = false
 
     var body: some View {
         Button(action: onSelect) {
@@ -200,7 +208,7 @@ private struct ConversationRow: View {
                 Spacer(minLength: 0)
 
                 if isHovered {
-                    Button(action: onDelete) {
+                    Button { showDeleteConfirmation = true } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(.tertiary)
@@ -218,6 +226,12 @@ private struct ConversationRow: View {
         .buttonStyle(.borderless)
         .onHover { isHovered = $0 }
         .animation(.easeOut(duration: 0.15), value: isHovered)
+        .alert("Delete conversation?", isPresented: $showDeleteConfirmation) {
+            Button("Delete", role: .destructive, action: onDelete)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This conversation will be permanently deleted.")
+        }
     }
 
     private var rowBackground: Color {
@@ -242,6 +256,9 @@ private struct ChatMainArea: View {
 
     @State private var inputText = ""
     @State private var showDeleteConfirmation = false
+    @State private var showLiveTrace = false
+    /// Static trace shown when user clicks the trace button on a completed message.
+    @State private var inspectedTrace: MessageTrace?
     @FocusState private var isInputFocused: Bool
 
     private var isBusy: Bool {
@@ -249,48 +266,58 @@ private struct ChatMainArea: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            topBar
-            Divider()
-            chatArea
-            inputBar
+        ZStack {
+            VStack(spacing: 0) {
+                topBar
+                chatArea
+                inputBar
+            }
+
+            // Trace inspector overlay — click outside or press Escape to dismiss
+            if inspectedTrace != nil || showLiveTrace {
+                traceOverlay
+                    .transition(.opacity)
+            }
         }
         .background(Color.clear)
+        .animation(.easeOut(duration: 0.15), value: inspectedTrace != nil)
+        .animation(.easeOut(duration: 0.15), value: showLiveTrace)
     }
 
     // MARK: - Top Bar
 
     private var topBar: some View {
-        HStack {
+        HStack(spacing: 12) {
             Text(coordinator.session.title)
-                .font(.headline)
+                .font(.system(size: 13, weight: .medium))
                 .lineLimit(1)
+                .foregroundStyle(.primary)
 
             Spacer()
 
-            HStack(spacing: 6) {
+            HStack(spacing: 5) {
                 Circle()
                     .fill(.green)
-                    .frame(width: 6, height: 6)
+                    .frame(width: 5, height: 5)
                 Text(coordinator.providerManager.activeProviderName)
-                    .font(.caption)
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)
-                Text("·")
-                    .foregroundStyle(.quaternary)
                 Text(coordinator.providerManager.activeModel)
-                    .font(.caption)
+                    .font(.system(size: 11))
                     .foregroundStyle(.tertiary)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(Color.primary.opacity(0.06), in: Capsule())
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.primary.opacity(0.05), in: Capsule())
 
             Button {
                 showDeleteConfirmation = true
             } label: {
                 Image(systemName: "trash")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.quaternary)
+                    .frame(width: 28, height: 28)
+                    .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 6))
             }
             .buttonStyle(.borderless)
             .help("Delete conversation")
@@ -302,7 +329,7 @@ private struct ChatMainArea: View {
             }
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 10)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Chat Area
@@ -315,7 +342,6 @@ private struct ChatMainArea: View {
             }
             .scrollContentBackground(.hidden)
             .onAppear {
-                // Scroll without animation on initial load to avoid layout loop
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                     proxy.scrollTo("bottomAnchor", anchor: .bottom)
                 }
@@ -346,7 +372,8 @@ private struct ChatMainArea: View {
                 ForEach(Array(messages.enumerated()), id: \.element.id) { index, message in
                     ChatBubble(
                         message: message,
-                        isFirstInGroup: isFirstInGroup(index, messages: messages)
+                        isFirstInGroup: isFirstInGroup(index, messages: messages),
+                        onShowTrace: { trace in inspectedTrace = trace }
                     )
                     .id(message.id)
                 }
@@ -356,7 +383,6 @@ private struct ChatMainArea: View {
                 streamingBubble.id("streaming")
             }
 
-            // Tool confirmation banner
             if let confirmation = coordinator.toolRegistry.pendingConfirmation {
                 ToolConfirmationBanner(
                     request: confirmation,
@@ -377,7 +403,6 @@ private struct ChatMainArea: View {
                 emptyState.id("empty")
             }
 
-            // Stable anchor at the bottom for reliable scrolling
             Color.clear.frame(height: 1).id("bottomAnchor")
         }
     }
@@ -395,8 +420,12 @@ private struct ChatMainArea: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                     .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 16))
-                TypingDotsView()
-                    .padding(.leading, 14)
+                HStack(spacing: 8) {
+                    TypingDotsView()
+                    Spacer()
+                    liveTraceButton
+                }
+                .padding(.leading, 14)
             }
             Spacer(minLength: 60)
         }
@@ -429,6 +458,8 @@ private struct ChatMainArea: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+                Spacer()
+                liveTraceButton
             }
         }
     }
@@ -436,84 +467,143 @@ private struct ChatMainArea: View {
     // MARK: - Input Bar
 
     private var inputBar: some View {
-        VStack(spacing: 0) {
-            Divider().opacity(0.5)
-            HStack(alignment: .center, spacing: 12) {
-                TextField("Message Voxa...", text: $inputText, axis: .vertical)
-                    .textFieldStyle(.plain)
-                    .lineLimit(1...8)
-                    .focused($isInputFocused)
-                    .onSubmit { sendMessage() }
-                    .disabled(isBusy)
-                    .font(.body)
+        HStack(alignment: .center, spacing: 10) {
+            TextField("Message Voxa...", text: $inputText, axis: .vertical)
+                .textFieldStyle(.plain)
+                .lineLimit(1...8)
+                .focused($isInputFocused)
+                .onSubmit { sendMessage() }
+                .disabled(isBusy)
+                .font(.system(size: 14))
 
-                Button(action: sendMessage) {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundStyle(canSend ? Color.accentColor : Color.secondary.opacity(0.2))
-                        .symbolRenderingMode(.hierarchical)
-                }
-                .buttonStyle(.borderless)
-                .disabled(!canSend)
-                .keyboardShortcut(.return, modifiers: [])
+            Button(action: sendMessage) {
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(canSend ? .white : .secondary.opacity(0.4))
+                    .frame(width: 28, height: 28)
+                    .background(
+                        canSend ? Color.accentColor : Color.primary.opacity(0.06),
+                        in: RoundedRectangle(cornerRadius: 8)
+                    )
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(Color.primary.opacity(isInputFocused ? 0.15 : 0.08), lineWidth: 1)
-            )
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
+            .buttonStyle(.borderless)
+            .disabled(!canSend)
+            .keyboardShortcut(.return, modifiers: [])
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(Color.primary.opacity(isInputFocused ? 0.12 : 0.06), lineWidth: 1)
+        )
+        .padding(.horizontal, 20)
+        .padding(.top, 4)
+        .padding(.bottom, 16)
         .contentShape(Rectangle())
         .onTapGesture { isInputFocused = true }
     }
 
     // MARK: - Empty State
 
-    private var emptyState: some View {
-        VStack(spacing: 20) {
-            Spacer().frame(height: 60)
-
-            ZStack {
-                Circle()
-                    .fill(Color.accentColor.opacity(0.08))
-                    .frame(width: 80, height: 80)
-                Image(systemName: "brain.head.profile")
-                    .font(.system(size: 36))
-                    .foregroundStyle(Color.accentColor.opacity(0.6))
-            }
-
-            VStack(spacing: 8) {
-                Text("How can I help?")
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(.primary)
-                Text("Type a message below or hold the agent hotkey to speak.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 340)
-            }
-
-            suggestionChips
-                .padding(.top, 4)
+    private var greeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12: return "Good morning"
+        case 12..<17: return "Good afternoon"
+        case 17..<22: return "Good evening"
+        default: return "Hello"
         }
-        .frame(maxWidth: .infinity)
     }
 
-    private var suggestionChips: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                chipButton("What's on my clipboard?", icon: "doc.on.clipboard")
-                chipButton("Take a screenshot", icon: "camera.viewfinder")
+    private var emptyState: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 24) {
+                // Greeting
+                VStack(spacing: 6) {
+                    Text(greeting)
+                        .font(.system(size: 28, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+                    Text("What would you like to do?")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.tertiary)
+                }
+
+                // Suggestion cards
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                    SuggestionCard(
+                        title: "Clipboard",
+                        subtitle: "What's on my clipboard?",
+                        icon: "doc.on.clipboard",
+                        accentColor: .blue
+                    ) {
+                        coordinator.sendTextMessage("What's on my clipboard?")
+                    }
+                    SuggestionCard(
+                        title: "Screenshot",
+                        subtitle: "Take a screenshot",
+                        icon: "camera.viewfinder",
+                        accentColor: .purple
+                    ) {
+                        coordinator.sendTextMessage("Take a screenshot")
+                    }
+                    SuggestionCard(
+                        title: "Files",
+                        subtitle: "Find files on Desktop",
+                        icon: "folder",
+                        accentColor: .orange
+                    ) {
+                        coordinator.sendTextMessage("Find files on Desktop")
+                    }
+                    SuggestionCard(
+                        title: "Summarize",
+                        subtitle: "Summarize selected text",
+                        icon: "text.quote",
+                        accentColor: .green
+                    ) {
+                        coordinator.sendTextMessage("Summarize selected text")
+                    }
+                }
+                .frame(maxWidth: 420)
             }
-            HStack(spacing: 8) {
-                chipButton("Find files on Desktop", icon: "folder.badge.magnifyingglass")
-                chipButton("Summarize selected text", icon: "text.quote")
-            }
+
+            Spacer()
+            Spacer()
         }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 32)
+    }
+
+    // MARK: - Trace Overlay
+
+    private var traceOverlay: some View {
+        ZStack {
+            // Dimmed backdrop — click to dismiss
+            Color.black.opacity(0.25)
+                .ignoresSafeArea()
+                .onTapGesture { dismissTrace() }
+
+            // Trace inspector panel
+            Group {
+                if showLiveTrace {
+                    TraceInspectorView(panelState: panelState, onDismiss: { dismissTrace() })
+                } else if let trace = inspectedTrace {
+                    TraceInspectorView(trace: trace, onDismiss: { dismissTrace() })
+                }
+            }
+            .frame(minWidth: 520, idealWidth: 600, maxWidth: 700, minHeight: 400, idealHeight: 560, maxHeight: 700)
+            .background(WindowAccessor())
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .shadow(color: .black.opacity(0.3), radius: 20, y: 8)
+        }
+        .onExitCommand { dismissTrace() }
+    }
+
+    private func dismissTrace() {
+        inspectedTrace = nil
+        showLiveTrace = false
     }
 
     // MARK: - Helpers
@@ -540,31 +630,6 @@ private struct ChatMainArea: View {
         }
     }
 
-    private func chipButton(_ text: String, icon: String) -> some View {
-        Button {
-            inputText = ""
-            coordinator.sendTextMessage(text)
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                Text(text)
-                    .font(.caption)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .frame(maxWidth: .infinity)
-            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
-            )
-        }
-        .buttonStyle(.borderless)
-        .disabled(isBusy)
-    }
-
     private func statusRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         HStack(alignment: .center, spacing: 12) {
             agentAvatar
@@ -583,8 +648,77 @@ private struct ChatMainArea: View {
             .background(Color.primary.opacity(0.06), in: Circle())
     }
 
+    private var liveTraceButton: some View {
+        Group {
+            if panelState.liveTrace != nil {
+                Button { showLiveTrace = true } label: {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 22, height: 22)
+                        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 5))
+                }
+                .buttonStyle(.plain)
+                .help("View live trace")
+            }
+        }
+    }
+
     private func toolDisplayName(_ name: String) -> String {
         name.split(separator: "_").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined(separator: " ")
+    }
+}
+
+// MARK: - Suggestion Card
+
+private struct SuggestionCard: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let accentColor: Color
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 15))
+                    .foregroundStyle(accentColor)
+                    .frame(width: 34, height: 34)
+                    .background(accentColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.primary)
+                    Text(subtitle)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.quaternary)
+                    .opacity(isHovered ? 1 : 0)
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.primary.opacity(isHovered ? 0.06 : 0.03))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.primary.opacity(isHovered ? 0.1 : 0.05), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .animation(.easeOut(duration: 0.15), value: isHovered)
     }
 }
 
@@ -593,9 +727,10 @@ private struct ChatMainArea: View {
 private struct ChatBubble: View {
     let message: DisplayMessage
     let isFirstInGroup: Bool
+    /// Callback to show trace in the parent's overlay.
+    var onShowTrace: ((MessageTrace) -> Void)?
     @State private var isHovered = false
     @State private var showCopied = false
-    @State private var showTrace = false
 
     var body: some View {
         Group {
@@ -605,21 +740,14 @@ private struct ChatBubble: View {
                 assistantBubble
             }
         }
-        .sheet(isPresented: $showTrace) {
-            if let trace = message.trace {
-                TraceInspectorView(trace: trace)
-            }
-        }
     }
-
-    // MARK: User Bubble — right-aligned with accent background
 
     private var userBubble: some View {
         HStack(alignment: .bottom, spacing: 8) {
             Spacer(minLength: 80)
             VStack(alignment: .trailing, spacing: 4) {
                 Text(message.content)
-                    .font(.body)
+                    .font(.system(size: 13))
                     .lineSpacing(2)
                     .textSelection(.enabled)
                     .padding(.horizontal, 16)
@@ -636,8 +764,6 @@ private struct ChatBubble: View {
         .padding(.top, isFirstInGroup ? 16 : 4)
         .padding(.bottom, 4)
     }
-
-    // MARK: Assistant Bubble — left-aligned with background
 
     private var assistantBubble: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -669,8 +795,6 @@ private struct ChatBubble: View {
         .padding(.bottom, 4)
     }
 
-    // MARK: Message Actions (hover only)
-
     private func messageActions(alignment: HorizontalAlignment) -> some View {
         HStack(spacing: 2) {
             Button {
@@ -680,34 +804,34 @@ private struct ChatBubble: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { showCopied = false }
             } label: {
                 Image(systemName: showCopied ? "checkmark" : "doc.on.doc")
-                    .font(.system(size: 11))
-                    .foregroundStyle(showCopied ? .green : .secondary)
-                    .frame(width: 26, height: 26)
-                    .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
+                    .font(.system(size: 10))
+                    .foregroundStyle(showCopied ? Color.green : Color.secondary)
+                    .frame(width: 24, height: 24)
+                    .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 5))
             }
             .buttonStyle(.plain)
             .help("Copy")
 
-            if message.trace != nil {
+            if let trace = message.trace {
                 Button {
-                    showTrace = true
+                    onShowTrace?(trace)
                 } label: {
                     Image(systemName: "info.circle")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 26, height: 26)
-                        .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 24, height: 24)
+                        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 5))
                 }
                 .buttonStyle(.plain)
                 .help("View trace")
             }
 
             Text(timeString)
-                .font(.caption2)
+                .font(.system(size: 10))
                 .foregroundStyle(.quaternary)
-                .padding(.horizontal, 6)
+                .padding(.leading, 4)
         }
-        .padding(.top, 2)
+        .frame(height: 24)
     }
 
     private var timeString: String {
@@ -717,7 +841,7 @@ private struct ChatBubble: View {
     }
 }
 
-// MARK: - Bubble Shape (with tail)
+// MARK: - Bubble Shape
 
 private struct BubbleShape: Shape {
     let isUser: Bool
@@ -736,7 +860,7 @@ private struct BubbleShape: Shape {
     }
 }
 
-// MARK: - Typing Dots (streaming indicator)
+// MARK: - Typing Dots
 
 private struct TypingDotsView: View {
     @State private var animating = false

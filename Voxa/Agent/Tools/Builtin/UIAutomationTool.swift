@@ -5,13 +5,13 @@ import Foundation
 
 struct UIAutomationTool: AgentTool {
     let name = "ui_automation"
-    let description = "Interact with UI elements: click, type text, or read element information."
+    let description = "Interact with UI elements: click, type text, read element information, list menu items, or get selected text."
     let parameters: [ToolParameter] = [
         ToolParameter(
             name: "action",
             type: "string",
             description: "The UI action to perform.",
-            enumValues: ["click", "type", "read_element", "list_elements", "get_focused_element"]
+            enumValues: ["click", "type", "read_element", "list_elements", "get_focused_element", "list_menu_items", "get_selected_text"]
         ),
         ToolParameter(
             name: "x",
@@ -53,6 +53,10 @@ struct UIAutomationTool: AgentTool {
             return listElements()
         case "get_focused_element":
             return readFocusedElement()
+        case "list_menu_items":
+            return listMenuItems()
+        case "get_selected_text":
+            return getSelectedText()
         default:
             throw ToolError.invalidArguments("Unknown action: \(action)")
         }
@@ -138,6 +142,77 @@ struct UIAutomationTool: AgentTool {
         var output = "Elements in \(app.localizedName ?? "app"):\n"
         walkTree(element: mainWindow, depth: 0, maxDepth: 3, output: &output)
         return .success(output)
+    }
+
+    private func listMenuItems() -> ToolResult {
+        guard let app = NSWorkspace.shared.frontmostApplication else {
+            return .error("No frontmost application")
+        }
+
+        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        var menuBarRef: AnyObject?
+        let result = AXUIElementCopyAttributeValue(appElement, kAXMenuBarAttribute as CFString, &menuBarRef)
+
+        guard result == .success, let menuBar = menuBarRef else {
+            return .success("No menu bar accessible for \(app.localizedName ?? "app")")
+        }
+
+        let menuBarElement = menuBar as! AXUIElement
+        var output = "Menu items for \(app.localizedName ?? "app"):\n"
+        walkMenuTree(element: menuBarElement, depth: 0, maxDepth: 2, output: &output)
+        return .success(output)
+    }
+
+    private func walkMenuTree(element: AXUIElement, depth: Int, maxDepth: Int, output: inout String) {
+        guard depth <= maxDepth else { return }
+
+        var childrenRef: AnyObject?
+        let result = AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenRef)
+        guard result == .success, let children = childrenRef as? [AXUIElement] else { return }
+
+        let indent = String(repeating: "  ", count: depth)
+
+        for child in children {
+            let role = getAttribute(child, kAXRoleAttribute) ?? ""
+            let title = getAttribute(child, kAXTitleAttribute) ?? ""
+            let enabled = getAttribute(child, kAXEnabledAttribute)
+
+            // Skip separators and empty items
+            if title.isEmpty && role != "AXMenuBarItem" && role != "AXMenu" { continue }
+
+            if !title.isEmpty {
+                var line = "\(indent)- \(title)"
+                if enabled == "0" { line += " (disabled)" }
+                output += line + "\n"
+            }
+
+            // Recurse into submenus
+            walkMenuTree(element: child, depth: depth + 1, maxDepth: maxDepth, output: &output)
+        }
+    }
+
+    private func getSelectedText() -> ToolResult {
+        let systemWide = AXUIElementCreateSystemWide()
+        var focusedRef: AnyObject?
+        let result = AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedRef)
+
+        guard result == .success, let focused = focusedRef else {
+            return .success("No focused element found")
+        }
+
+        let element = focused as! AXUIElement
+        var selectedTextRef: AnyObject?
+        let textResult = AXUIElementCopyAttributeValue(element, kAXSelectedTextAttribute as CFString, &selectedTextRef)
+
+        guard textResult == .success, let selectedText = selectedTextRef as? String else {
+            return .success("No text selected (or element doesn't support text selection)")
+        }
+
+        if selectedText.isEmpty {
+            return .success("No text selected")
+        }
+
+        return .success(selectedText)
     }
 
     private func walkTree(element: AXUIElement, depth: Int, maxDepth: Int, output: inout String) {

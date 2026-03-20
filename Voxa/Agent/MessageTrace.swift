@@ -60,8 +60,8 @@ enum TraceEntryKind: Codable, Sendable {
     case llmResponse(content: String?, toolCalls: [ToolCallSummary]?)
     /// A tool was executed.
     case toolExecution(ToolCallSummary)
-    /// A sub-agent was delegated to.
-    case subAgentDelegation(agentName: String, input: String, output: String, durationMs: Int)
+    /// A sub-agent was delegated to, with its internal trace entries.
+    case subAgentDelegation(agentName: String, input: String, output: String, durationMs: Int, steps: [TraceEntry])
     /// An error occurred during processing.
     case error(String)
 }

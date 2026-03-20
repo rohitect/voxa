@@ -21,6 +21,12 @@ final class DelegateToAgentTool: AgentTool, @unchecked Sendable {
     /// Set before each processing cycle so sub-agent activity shows in the UI.
     var activeCallbacks: AgentCallbacks = .none
 
+    /// Trace entries from the last sub-agent delegation, read by AgentExecutor after execution.
+    private(set) var lastDelegationTrace: [TraceEntry] = []
+
+    /// Called with each sub-agent trace entry as it happens, for live trace display.
+    var onSubAgentTraceEntry: ((_ agentId: String, _ entry: TraceEntry) -> Void)?
+
     /// Dynamic description listing available agents from loaded definitions.
     var description: String {
         guard let manager = subAgentManager else {
@@ -54,12 +60,16 @@ final class DelegateToAgentTool: AgentTool, @unchecked Sendable {
         }
 
         do {
-            let result = try await manager.delegate(
+            let delegation = try await manager.delegate(
                 agentId: agentId,
                 task: task,
-                callbacks: activeCallbacks
+                callbacks: activeCallbacks,
+                onTraceEntry: { [weak self] entry in
+                    self?.onSubAgentTraceEntry?(agentId, entry)
+                }
             )
-            return .success(result.isEmpty ? "(sub-agent completed with no output)" : result)
+            lastDelegationTrace = delegation.traceEntries
+            return .success(delegation.response.isEmpty ? "(sub-agent completed with no output)" : delegation.response)
         } catch let error as SubAgentError {
             return .error(error.localizedDescription)
         } catch is CancellationError {

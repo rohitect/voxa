@@ -39,25 +39,15 @@ final class AgentCoordinator {
         self.delegateTool = delegateTool
         self.toolRegistry.register(delegateTool)
 
-        // Register builtin tools
-        self.toolRegistry.register(ClipboardTool())
-        self.toolRegistry.register(AppLauncherTool())
-        self.toolRegistry.register(FileSearchTool())
-        self.toolRegistry.register(ScreenCaptureTool())
-        self.toolRegistry.register(SystemSettingsTool())
-        self.toolRegistry.register(UIAutomationTool())
-        self.toolRegistry.register(ShellCommandTool())
-        self.toolRegistry.register(AppleScriptTool())
-        self.toolRegistry.register(FileWriteTool())
-        self.toolRegistry.register(FileReadTool())
-        self.toolRegistry.register(ListDirectoryTool())
+        // No builtin tools on main agent — all tools come via MCP servers or sub-agents
 
         self.conversationStore = ConversationStore()
         self.personaManager = PersonaManager(providerManager: providerManager)
         self.executor = AgentExecutor(providerManager: providerManager, toolRegistry: toolRegistry, personaManager: personaManager)
 
-        // Connect all enabled MCP servers on launch
-        Task { await mcpManager.connectAll() }
+        // Connect MCP servers for main agent, excluding those owned by sub-agents
+        let subAgentMCPIDs = Set(subAgentManager.sortedDefinitions.flatMap(\.mcpServers))
+        Task { await mcpManager.connectAll(excludingServerIDs: subAgentMCPIDs) }
 
         // Wire up panel UI callbacks
         AgentPanel.shared.state.toolRegistry = toolRegistry
@@ -170,12 +160,21 @@ final class AgentCoordinator {
 
             let callbacks = makeCallbacks()
             delegateTool.activeCallbacks = callbacks
+            delegateTool.onSubAgentTraceEntry = { agentId, entry in
+                Task { @MainActor in
+                    guard var trace = AgentPanel.shared.state.liveTrace else { return }
+                    trace.append(entry)
+                    AgentPanel.shared.state.liveTrace = trace
+                }
+            }
 
             let response = try await executor.process(
                 transcript: transcript,
                 session: session,
                 callbacks: callbacks
             )
+
+            delegateTool.onSubAgentTraceEntry = nil
 
             await MainActor.run {
                 if let trace = response.trace {
@@ -192,12 +191,14 @@ final class AgentCoordinator {
             print("[AgentCoordinator] Text response: \(response.displayText.prefix(200))")
 
         } catch is CancellationError {
+            delegateTool.onSubAgentTraceEntry = nil
             print("[AgentCoordinator] Text processing cancelled")
             await MainActor.run {
                 AgentPanel.shared.showStatus("Cancelled.")
                 CompanionState.shared.phase = .idle
             }
         } catch {
+            delegateTool.onSubAgentTraceEntry = nil
             print("[AgentCoordinator] Text error: \(error)")
             let userMessage = Self.formatErrorForUser(error)
             await MainActor.run {
@@ -244,6 +245,13 @@ final class AgentCoordinator {
 
             let callbacks = makeCallbacks()
             delegateTool.activeCallbacks = callbacks
+            delegateTool.onSubAgentTraceEntry = { agentId, entry in
+                Task { @MainActor in
+                    guard var trace = AgentPanel.shared.state.liveTrace else { return }
+                    trace.append(entry)
+                    AgentPanel.shared.state.liveTrace = trace
+                }
+            }
 
             // Process through the agent executor
             let response = try await executor.process(
@@ -251,6 +259,8 @@ final class AgentCoordinator {
                 session: session,
                 callbacks: callbacks
             )
+
+            delegateTool.onSubAgentTraceEntry = nil
 
             await MainActor.run {
                 // Store trace before finalizing
@@ -277,6 +287,7 @@ final class AgentCoordinator {
             print("[AgentCoordinator] Response: \(response.displayText.prefix(200))")
 
         } catch is CancellationError {
+            delegateTool.onSubAgentTraceEntry = nil
             print("[AgentCoordinator] Processing cancelled")
             await MainActor.run {
                 appState.status = .idle
@@ -284,6 +295,7 @@ final class AgentCoordinator {
                 CompanionState.shared.phase = .idle
             }
         } catch {
+            delegateTool.onSubAgentTraceEntry = nil
             print("[AgentCoordinator] Error: \(error)")
             let userMessage = Self.formatErrorForUser(error)
             await MainActor.run {
@@ -317,6 +329,11 @@ final class AgentCoordinator {
                 await MainActor.run {
                     AgentPanel.shared.clearToolExecution()
                     CompanionState.shared.phase = .responding
+                }
+            },
+            onTraceUpdate: { @Sendable trace in
+                await MainActor.run {
+                    AgentPanel.shared.state.liveTrace = trace
                 }
             }
         )

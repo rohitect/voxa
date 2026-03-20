@@ -38,9 +38,13 @@ final class MCPManager {
 
     // MARK: - Lifecycle
 
-    func connectAll() async {
+    func connectAll(excludingServerIDs: Set<String> = []) async {
         let assignedIDs = mainAgentMCPServerIDs
         for config in configStore.servers where config.enabled {
+            // Skip MCP servers exclusively owned by sub-agents
+            if excludingServerIDs.contains(config.id) {
+                continue
+            }
             // If main agent has specific MCP assignments, only connect those
             if let assignedIDs, !assignedIDs.contains(config.id) {
                 continue

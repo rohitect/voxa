@@ -109,6 +109,7 @@ private struct MCPServerRow: View {
     let onRemove: () -> Void
 
     @State private var isExpanded = false
+    @State private var showRemoveConfirmation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -203,13 +204,19 @@ private struct MCPServerRow: View {
                 .controlSize(.small)
 
                 // Remove
-                Button(action: onRemove) {
+                Button { showRemoveConfirmation = true } label: {
                     Image(systemName: "trash")
                         .font(.caption)
                         .foregroundStyle(.red)
                 }
                 .buttonStyle(.borderless)
                 .help("Remove")
+                .alert("Remove MCP Server?", isPresented: $showRemoveConfirmation) {
+                    Button("Remove", role: .destructive, action: onRemove)
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("Remove \"\(server.name)\"? This cannot be undone.")
+                }
             }
 
             // Build command

@@ -65,6 +65,11 @@ struct OpenAIProvider: LLMProvider {
                     let (bytes, response) = try await URLSession.shared.bytes(for: request)
                     try validateHTTPResponse(response, data: nil)
 
+                    // Accumulate tool call deltas by index.
+                    // OpenAI sends tool calls incrementally: first chunk has id + name,
+                    // subsequent chunks for the same index only have argument fragments.
+                    var toolCallAccumulator: [Int: (id: String, name: String, arguments: String)] = [:]
+
                     for try await line in bytes.lines {
                         guard line.hasPrefix("data: ") else { continue }
                         let payload = String(line.dropFirst(6))
@@ -79,16 +84,60 @@ struct OpenAIProvider: LLMProvider {
                         }
 
                         let content = delta["content"] as? String
-                        let toolCalls = parseToolCallDeltas(delta["tool_calls"] as? [[String: Any]])
                         let finishReason = parseFinishReason(choice["finish_reason"] as? String)
 
-                        let chunk = ChatStreamChunk(
-                            deltaContent: content,
-                            deltaToolCalls: toolCalls,
-                            finishReason: finishReason
-                        )
-                        continuation.yield(chunk)
+                        // Accumulate tool call deltas by index
+                        if let tcDeltas = delta["tool_calls"] as? [[String: Any]] {
+                            for tc in tcDeltas {
+                                let index = tc["index"] as? Int ?? toolCallAccumulator.count
+                                let function = tc["function"] as? [String: Any]
+
+                                if let existing = toolCallAccumulator[index] {
+                                    // Append argument fragment to existing entry
+                                    let argFragment = function?["arguments"] as? String ?? ""
+                                    toolCallAccumulator[index] = (
+                                        id: existing.id,
+                                        name: existing.name,
+                                        arguments: existing.arguments + argFragment
+                                    )
+                                } else {
+                                    // First delta for this index — has id and name
+                                    let id = tc["id"] as? String ?? UUID().uuidString
+                                    let name = function?["name"] as? String ?? ""
+                                    let args = function?["arguments"] as? String ?? ""
+                                    toolCallAccumulator[index] = (id: id, name: name, arguments: args)
+                                }
+                            }
+                        }
+
+                        // Yield content deltas immediately for streaming display
+                        if content != nil || finishReason != nil {
+                            let chunk = ChatStreamChunk(
+                                deltaContent: content,
+                                deltaToolCalls: nil,
+                                finishReason: finishReason
+                            )
+                            continuation.yield(chunk)
+                        }
                     }
+
+                    // Yield accumulated tool calls as a single final chunk
+                    if !toolCallAccumulator.isEmpty {
+                        let toolCalls = toolCallAccumulator.sorted { $0.key < $1.key }.compactMap { (_, entry) -> ToolCall? in
+                            guard !entry.name.isEmpty else { return nil }
+                            let args = entry.arguments.isEmpty ? "{}" : entry.arguments
+                            return ToolCall(id: entry.id, name: entry.name, arguments: args)
+                        }
+                        if !toolCalls.isEmpty {
+                            let chunk = ChatStreamChunk(
+                                deltaContent: nil,
+                                deltaToolCalls: toolCalls,
+                                finishReason: .toolCalls
+                            )
+                            continuation.yield(chunk)
+                        }
+                    }
+
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)

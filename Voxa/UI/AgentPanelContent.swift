@@ -6,6 +6,7 @@ struct AgentPanelContent: View {
     let onNewSession: () -> Void
 
     @State private var inputText = ""
+    @State private var inspectedTrace: MessageTrace?
     @FocusState private var isInputFocused: Bool
 
     private var isBusy: Bool {
@@ -13,13 +14,30 @@ struct AgentPanelContent: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            toolbar
-            Divider()
-            chatArea
-            inputBar
+        ZStack {
+            VStack(spacing: 0) {
+                toolbar
+                Divider()
+                chatArea
+                inputBar
+            }
+
+            if inspectedTrace != nil {
+                Color.black.opacity(0.25)
+                    .ignoresSafeArea()
+                    .onTapGesture { inspectedTrace = nil }
+
+                TraceInspectorView(trace: inspectedTrace!, onDismiss: { inspectedTrace = nil })
+                    .frame(minWidth: 420, idealWidth: 520, maxWidth: 600, minHeight: 320, idealHeight: 480, maxHeight: 600)
+                    .background(WindowAccessor())
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .shadow(color: .black.opacity(0.3), radius: 20, y: 8)
+                    .onExitCommand { inspectedTrace = nil }
+                    .transition(.opacity)
+            }
         }
         .frame(minWidth: 320, minHeight: 260)
+        .animation(.easeOut(duration: 0.15), value: inspectedTrace != nil)
     }
 
     // MARK: - Toolbar
@@ -66,7 +84,8 @@ struct AgentPanelContent: View {
                         ForEach(Array(messages.enumerated()), id: \.element.id) { index, message in
                             CompactBubble(
                                 message: message,
-                                isFirstInGroup: isFirstInGroup(index, messages: messages)
+                                isFirstInGroup: isFirstInGroup(index, messages: messages),
+                                onShowTrace: { trace in inspectedTrace = trace }
                             )
                             .id(message.id)
                         }
@@ -180,7 +199,7 @@ struct AgentPanelContent: View {
     // MARK: - Input Bar
 
     private var inputBar: some View {
-        HStack(alignment: .bottom, spacing: 8) {
+        HStack(alignment: .center, spacing: 8) {
             TextField("Message...", text: $inputText, axis: .vertical)
                 .textFieldStyle(.plain)
                 .lineLimit(1...5)
@@ -252,9 +271,9 @@ struct AgentPanelContent: View {
 private struct CompactBubble: View {
     let message: DisplayMessage
     let isFirstInGroup: Bool
+    var onShowTrace: ((MessageTrace) -> Void)?
     @State private var isHovered = false
     @State private var showCopied = false
-    @State private var showTrace = false
 
     var body: some View {
         Group {
@@ -262,11 +281,6 @@ private struct CompactBubble: View {
                 userBubble
             } else {
                 assistantBubble
-            }
-        }
-        .sheet(isPresented: $showTrace) {
-            if let trace = message.trace {
-                TraceInspectorView(trace: trace)
             }
         }
     }
@@ -323,9 +337,9 @@ private struct CompactBubble: View {
             }
             .buttonStyle(.plain)
 
-            if message.trace != nil {
+            if let trace = message.trace {
                 Button {
-                    showTrace = true
+                    onShowTrace?(trace)
                 } label: {
                     Image(systemName: "info.circle")
                         .font(.system(size: 9))

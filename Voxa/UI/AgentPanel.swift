@@ -28,6 +28,7 @@ final class AgentPanel {
         state.isListening = false
         state.isProcessing = true
         state.streamingText = ""
+        state.liveTrace = nil
     }
 
     /// Append a text delta from the LLM stream.
@@ -58,6 +59,7 @@ final class AgentPanel {
         state.isStreaming = false
         state.streamingText = ""
         state.currentToolName = nil
+        state.liveTrace = nil
         state.session = session
 
         if state.panelMode == .popUp {
@@ -131,6 +133,9 @@ final class AgentPanelState {
     var statusMessage: String?
     var currentToolName: String?
     var toolRegistry: ToolRegistry?
+
+    /// Live trace being built during the current processing turn.
+    var liveTrace: MessageTrace?
 
     /// Persistent or pop-up mode.
     var panelMode: PanelMode {

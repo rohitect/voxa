@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Renders markdown content in chat bubbles with support for headers, bold, italic,
-/// inline code, fenced code blocks, links, and lists.
+/// inline code, fenced code blocks, links, lists, blockquotes, and horizontal rules.
 struct MarkdownView: View {
     let content: String
     let fontSize: CGFloat
@@ -26,11 +26,16 @@ struct MarkdownView: View {
     private enum Block {
         case text(String)
         case codeBlock(language: String?, code: String)
+        case header(level: Int, text: String)
+        case bulletList(items: [String])
+        case numberedList(items: [String])
+        case blockquote(String)
+        case horizontalRule
     }
 
     // MARK: - Parsing
 
-    /// Split content into text blocks and fenced code blocks
+    /// Split content into structured blocks
     private func parseBlocks() -> [Block] {
         var blocks: [Block] = []
         let lines = content.components(separatedBy: "\n")
@@ -39,39 +44,142 @@ struct MarkdownView: View {
         var codeLines: [String] = []
         var codeLanguage: String?
 
-        for line in lines {
-            if !inCodeBlock && line.hasPrefix("```") {
-                // Flush accumulated text
-                if !currentText.isEmpty {
-                    blocks.append(.text(currentText.joined(separator: "\n")))
-                    currentText = []
+        // Accumulators for lists
+        var bulletItems: [String] = []
+        var numberedItems: [String] = []
+
+        func flushText() {
+            if !currentText.isEmpty {
+                let text = currentText.joined(separator: "\n")
+                if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    blocks.append(.text(text))
                 }
+                currentText = []
+            }
+        }
+
+        func flushBulletList() {
+            if !bulletItems.isEmpty {
+                blocks.append(.bulletList(items: bulletItems))
+                bulletItems = []
+            }
+        }
+
+        func flushNumberedList() {
+            if !numberedItems.isEmpty {
+                blocks.append(.numberedList(items: numberedItems))
+                numberedItems = []
+            }
+        }
+
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+
+            // --- Fenced code blocks ---
+            if !inCodeBlock && trimmed.hasPrefix("```") {
+                flushText()
+                flushBulletList()
+                flushNumberedList()
                 inCodeBlock = true
-                codeLanguage = String(line.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+                codeLanguage = String(trimmed.dropFirst(3)).trimmingCharacters(in: .whitespaces)
                 if codeLanguage?.isEmpty == true { codeLanguage = nil }
                 codeLines = []
-            } else if inCodeBlock && line.hasPrefix("```") {
+                continue
+            }
+            if inCodeBlock && trimmed.hasPrefix("```") {
                 blocks.append(.codeBlock(language: codeLanguage, code: codeLines.joined(separator: "\n")))
                 inCodeBlock = false
                 codeLines = []
                 codeLanguage = nil
-            } else if inCodeBlock {
-                codeLines.append(line)
-            } else {
-                currentText.append(line)
+                continue
             }
+            if inCodeBlock {
+                codeLines.append(line)
+                continue
+            }
+
+            // --- Horizontal rule ---
+            if trimmed == "---" || trimmed == "***" || trimmed == "___" {
+                flushText()
+                flushBulletList()
+                flushNumberedList()
+                blocks.append(.horizontalRule)
+                continue
+            }
+
+            // --- Headers ---
+            if let headerMatch = parseHeader(trimmed) {
+                flushText()
+                flushBulletList()
+                flushNumberedList()
+                blocks.append(.header(level: headerMatch.level, text: headerMatch.text))
+                continue
+            }
+
+            // --- Blockquote ---
+            if trimmed.hasPrefix("> ") || trimmed == ">" {
+                flushText()
+                flushBulletList()
+                flushNumberedList()
+                let quoteText = trimmed.hasPrefix("> ") ? String(trimmed.dropFirst(2)) : ""
+                blocks.append(.blockquote(quoteText))
+                continue
+            }
+
+            // --- Bullet list ---
+            if trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") || trimmed.hasPrefix("+ ") {
+                flushText()
+                flushNumberedList()
+                let item = String(trimmed.dropFirst(2))
+                bulletItems.append(item)
+                continue
+            }
+
+            // --- Numbered list ---
+            if let numItem = parseNumberedListItem(trimmed) {
+                flushText()
+                flushBulletList()
+                numberedItems.append(numItem)
+                continue
+            }
+
+            // --- Regular text ---
+            flushBulletList()
+            flushNumberedList()
+            currentText.append(line)
         }
 
         // Flush remaining
         if inCodeBlock {
-            // Unclosed code block — treat as code anyway
             blocks.append(.codeBlock(language: codeLanguage, code: codeLines.joined(separator: "\n")))
         }
-        if !currentText.isEmpty {
-            blocks.append(.text(currentText.joined(separator: "\n")))
-        }
+        flushText()
+        flushBulletList()
+        flushNumberedList()
 
         return blocks
+    }
+
+    private func parseHeader(_ line: String) -> (level: Int, text: String)? {
+        var level = 0
+        for ch in line {
+            if ch == "#" { level += 1 } else { break }
+        }
+        guard level >= 1, level <= 6, line.count > level, line[line.index(line.startIndex, offsetBy: level)] == " " else {
+            return nil
+        }
+        let text = String(line.dropFirst(level + 1))
+        return (level, text)
+    }
+
+    private func parseNumberedListItem(_ line: String) -> String? {
+        // Match "1. ", "2. ", "10. ", etc.
+        guard let dotIndex = line.firstIndex(of: ".") else { return nil }
+        let prefix = line[line.startIndex..<dotIndex]
+        guard !prefix.isEmpty, prefix.allSatisfy(\.isNumber) else { return nil }
+        let afterDot = line.index(after: dotIndex)
+        guard afterDot < line.endIndex, line[afterDot] == " " else { return nil }
+        return String(line[line.index(after: afterDot)...])
     }
 
     // MARK: - Block Views
@@ -85,8 +193,93 @@ struct MarkdownView: View {
             }
         case .codeBlock(let language, let code):
             codeBlockView(language: language, code: code)
+        case .header(let level, let text):
+            headerView(level: level, text: text)
+        case .bulletList(let items):
+            bulletListView(items: items)
+        case .numberedList(let items):
+            numberedListView(items: items)
+        case .blockquote(let text):
+            blockquoteView(text: text)
+        case .horizontalRule:
+            Divider()
+                .padding(.vertical, 4)
         }
     }
+
+    // MARK: - Header
+
+    private func headerView(level: Int, text: String) -> some View {
+        let (size, weight): (CGFloat, Font.Weight) = {
+            switch level {
+            case 1: return (fontSize + 8, .bold)
+            case 2: return (fontSize + 5, .bold)
+            case 3: return (fontSize + 3, .semibold)
+            case 4: return (fontSize + 1, .semibold)
+            default: return (fontSize, .semibold)
+            }
+        }()
+        return Text(parseInlineMarkdown(text, baseSize: size))
+            .font(.system(size: size, weight: weight))
+            .textSelection(.enabled)
+            .padding(.top, level <= 2 ? 6 : 2)
+    }
+
+    // MARK: - Lists
+
+    private func bulletListView(items: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text("\u{2022}")
+                        .font(.system(size: fontSize))
+                        .foregroundStyle(.secondary)
+                    Text(parseInlineMarkdown(item, baseSize: fontSize))
+                        .font(.system(size: fontSize))
+                        .textSelection(.enabled)
+                        .lineSpacing(2)
+                }
+            }
+        }
+        .padding(.leading, 4)
+    }
+
+    private func numberedListView(items: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text("\(index + 1).")
+                        .font(.system(size: fontSize, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .frame(minWidth: 20, alignment: .trailing)
+                    Text(parseInlineMarkdown(item, baseSize: fontSize))
+                        .font(.system(size: fontSize))
+                        .textSelection(.enabled)
+                        .lineSpacing(2)
+                }
+            }
+        }
+        .padding(.leading, 4)
+    }
+
+    // MARK: - Blockquote
+
+    private func blockquoteView(text: String) -> some View {
+        HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(Color.secondary.opacity(0.4))
+                .frame(width: 3)
+            Text(parseInlineMarkdown(text, baseSize: fontSize))
+                .font(.system(size: fontSize))
+                .italic()
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .lineSpacing(2)
+        }
+        .padding(.vertical, 2)
+    }
+
+    // MARK: - Code Block
 
     private func codeBlockView(language: String?, code: String) -> some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -131,26 +324,24 @@ struct MarkdownView: View {
     // MARK: - Inline Markdown → AttributedString
 
     private func inlineMarkdownText(_ text: String) -> some View {
-        let attributed = parseInlineMarkdown(text)
+        let attributed = parseInlineMarkdown(text, baseSize: fontSize)
         return Text(attributed)
             .lineSpacing(fontSize > 12 ? 3 : 2)
             .textSelection(.enabled)
     }
 
-    private func parseInlineMarkdown(_ text: String) -> AttributedString {
+    private func parseInlineMarkdown(_ text: String, baseSize: CGFloat) -> AttributedString {
         // Try Apple's built-in markdown parser first
         if let result = try? AttributedString(
             markdown: text,
             options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
         ) {
             var styled = result
-            // Apply base font
-            styled.font = .system(size: fontSize)
-            // Style inline code runs
+            styled.font = .system(size: baseSize)
             for run in styled.runs {
                 if run.inlinePresentationIntent?.contains(.code) == true {
                     let range = run.range
-                    styled[range].font = .system(size: fontSize - 1, design: .monospaced)
+                    styled[range].font = .system(size: baseSize - 1, design: .monospaced)
                     styled[range].backgroundColor = isUser
                         ? Color.white.opacity(0.15)
                         : Color(.textBackgroundColor).opacity(0.6)
@@ -159,9 +350,8 @@ struct MarkdownView: View {
             return styled
         }
 
-        // Fallback: plain text
         var plain = AttributedString(text)
-        plain.font = .system(size: fontSize)
+        plain.font = .system(size: baseSize)
         return plain
     }
 }

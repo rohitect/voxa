@@ -8,7 +8,7 @@ import AppKit
 struct WindowAccessor: NSViewRepresentable {
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = WindowEffectView()
-        view.material = .hudWindow
+        view.material = .sidebar
         view.blendingMode = .behindWindow
         view.state = .active
         view.isEmphasized = true
@@ -28,6 +28,9 @@ private class WindowEffectView: NSVisualEffectView {
         didConfigure = true
         window.isOpaque = false
         window.backgroundColor = .clear
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.styleMask.insert(.fullSizeContentView)
         window.isMovableByWindowBackground = true
     }
 }

@@ -8,11 +8,14 @@ struct AgentCallbacks: Sendable {
     let onToolStart: @Sendable (String) async -> Void
     /// Called when a tool finishes executing.
     let onToolEnd: @Sendable (String, Bool) async -> Void
+    /// Called when a new trace entry is appended (for live trace display).
+    let onTraceUpdate: @Sendable (MessageTrace) async -> Void
 
     static let none = AgentCallbacks(
         onStreamDelta: { _ in },
         onToolStart: { _ in },
-        onToolEnd: { _, _ in }
+        onToolEnd: { _, _ in },
+        onTraceUpdate: { _ in }
     )
 }
 
@@ -21,7 +24,7 @@ final class AgentExecutor {
     private let providerManager: LLMProviderManager
     private let toolRegistry: ToolRegistry
     private let personaManager: PersonaManager?
-    private let maxToolIterations = 10
+    private let maxToolIterations = 30
 
     init(providerManager: LLMProviderManager, toolRegistry: ToolRegistry, personaManager: PersonaManager? = nil) {
         self.providerManager = providerManager
@@ -91,6 +94,13 @@ final class AgentExecutor {
         let agentName = personaManager?.agentName ?? "Voxa"
         var trace = MessageTrace(agentName: agentName, provider: providerName, model: model, systemPromptLength: systemPromptLen)
 
+        // Helper to push live trace updates to the UI
+        @Sendable func pushTrace(_ trace: MessageTrace) async {
+            await callbacks.onTraceUpdate(trace)
+        }
+
+        await pushTrace(trace)
+
         // Agentic tool loop
         var lastToolOutputs: [(name: String, output: String)] = []
 
@@ -100,6 +110,7 @@ final class AgentExecutor {
             let messageCount = session.llmMessages.count
             let toolCount = hasTools ? toolDefs.count : 0
             trace.append(TraceEntry(.llmRequest(messageCount: messageCount, toolCount: toolCount, iteration: iteration + 1)))
+            await pushTrace(trace)
 
             // Stream LLM response
             let response: ChatResponse
@@ -114,6 +125,7 @@ final class AgentExecutor {
             } catch {
                 trace.append(TraceEntry(.error("LLM stream failed: \(error.localizedDescription)")))
                 trace.finish()
+                await pushTrace(trace)
 
                 // If LLM fails mid-tool-loop, return tool results instead of losing everything
                 if !lastToolOutputs.isEmpty {
@@ -134,6 +146,7 @@ final class AgentExecutor {
                 content: response.message.content,
                 toolCalls: toolCallSummaries
             )))
+            await pushTrace(trace)
 
             // Add assistant message to session
             session.addAssistantMessage(response.message)
@@ -177,15 +190,34 @@ final class AgentExecutor {
                 session.addToolResult(content: truncated, toolCallId: call.id, toolName: call.name)
                 toolsUsed.append(call.name)
 
-                trace.append(TraceEntry(.toolExecution(ToolCallSummary(
-                    id: call.id,
-                    name: call.name,
-                    arguments: call.arguments,
-                    output: result.output,
-                    isError: result.isError,
-                    durationMs: durationMs,
-                    isMCP: isMCPTool(call.name)
-                ))))
+                // Emit a subAgentDelegation trace entry for delegate_to_agent calls
+                if call.name == "delegate_to_agent",
+                   let argsData = call.arguments.data(using: .utf8),
+                   let argsDict = try? JSONSerialization.jsonObject(with: argsData) as? [String: Any],
+                   let subAgentId = argsDict["agent"] as? String {
+                    let task = argsDict["task"] as? String ?? ""
+                    // Pull the sub-agent's internal trace from the delegate tool
+                    let subSteps = (toolRegistry.tool(named: "delegate_to_agent") as? DelegateToAgentTool)?.lastDelegationTrace ?? []
+                    trace.append(TraceEntry(.subAgentDelegation(
+                        agentName: subAgentId,
+                        input: task,
+                        output: result.output,
+                        durationMs: durationMs,
+                        steps: subSteps
+                    )))
+                } else {
+                    trace.append(TraceEntry(.toolExecution(ToolCallSummary(
+                        id: call.id,
+                        name: call.name,
+                        arguments: call.arguments,
+                        output: result.output,
+                        isError: result.isError,
+                        durationMs: durationMs,
+                        isMCP: isMCPTool(call.name)
+                    ))))
+                }
+
+                await pushTrace(trace)
 
                 print("[AgentExecutor] \(call.name): \(result.isError ? "ERROR" : "OK") (\(result.output.count) chars)")
             }
@@ -340,21 +372,34 @@ final class AgentExecutor {
 
     private func buildSystemPrompt(toolNames: [String]) -> String {
         var prompt = """
-        You are Voxa, a voice-controlled AI assistant running on macOS. \
-        You help users accomplish tasks on their Mac through voice commands.
+        You are Voxa, a personal voice assistant on macOS. You help your user by answering \
+        questions, having conversations, giving advice, drafting text, and explaining things. \
+        You are direct, concise, and warm — never sycophantic.
         """
 
         if !toolNames.isEmpty {
-            let toolList = toolNames.joined(separator: ", ")
-            prompt += """
-             You have access to the following tools: \(toolList). \
-            Use tools proactively when the user's request requires action — don't just describe steps. \
-            You can chain multiple tool calls to accomplish complex tasks. \
-            If a tool fails, analyze the error and try an alternative approach.
-            """
+            let directTools = toolNames.filter { $0 != "delegate_to_agent" }
+            let hasDelegation = toolNames.contains("delegate_to_agent")
+
+            if !directTools.isEmpty {
+                let toolList = directTools.joined(separator: ", ")
+                prompt += " You have direct access to: \(toolList). Use them when appropriate."
+            }
+            if hasDelegation {
+                prompt += """
+                 You also have sub-agents for computer tasks. When the user needs something \
+                done on their Mac (commands, apps, files, settings), delegate using delegate_to_agent. \
+                For questions, conversations, and text — respond directly.
+                """
+            }
+            prompt += " When tools or sub-agents return results, present them clearly."
         }
 
-        prompt += " Keep responses concise — this is a voice interface. Be direct and actionable."
+        prompt += """
+         This is a voice-first interface. Lead with the answer. Use markdown formatting \
+        when it helps. Have opinions. Be resourceful — try to answer before asking. \
+        Never make things up.
+        """
         return prompt
     }
 }

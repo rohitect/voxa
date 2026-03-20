@@ -179,7 +179,6 @@ struct VoxaApp: App {
                 }
         }
         .defaultSize(width: 700, height: 480)
-        .windowStyle(.hiddenTitleBar)
 
         Window("Welcome to Voxa", id: "onboarding") {
             OnboardingView(appState: appState) {
@@ -189,7 +188,6 @@ struct VoxaApp: App {
         }
         .defaultSize(width: 440, height: 380)
         .windowResizability(.contentSize)
-        .windowStyle(.hiddenTitleBar)
     }
 
     init() {

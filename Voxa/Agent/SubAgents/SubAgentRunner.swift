@@ -13,6 +13,9 @@ final class SubAgentRunner {
     /// Isolated MCP connections owned by this runner — disconnected on completion.
     private var connections: [MCPConnection] = []
 
+    /// Called with each trace entry as it's created, for live trace streaming.
+    var onTraceEntry: ((_ entry: TraceEntry) -> Void)?
+
     init(definition: SubAgentDefinition, provider: any LLMProvider, model: String, mcpConfigs: [MCPServerConfig]) {
         self.definition = definition
         self.provider = provider
@@ -22,8 +25,28 @@ final class SubAgentRunner {
         self.session = ChatSession()
     }
 
-    /// Run the sub-agent with the given task. Returns the final text response.
-    func run(task: String, callbacks: AgentCallbacks) async throws -> String {
+    /// Result from a sub-agent run, including the response text and internal trace steps.
+    struct RunResult {
+        let response: String
+        let traceEntries: [TraceEntry]
+    }
+
+    /// Run the sub-agent with the given task. Returns the final text response and trace.
+    ///
+    /// Stream deltas are suppressed so sub-agent LLM output doesn't leak into the main chat bubble.
+    /// Tool start/end callbacks are preserved so the UI can show sub-agent tool activity.
+    func run(task: String, callbacks: AgentCallbacks) async throws -> RunResult {
+        let callbacks = AgentCallbacks(
+            onStreamDelta: { _ in },
+            onToolStart: callbacks.onToolStart,
+            onToolEnd: callbacks.onToolEnd,
+            onTraceUpdate: callbacks.onTraceUpdate
+        )
+        // Register builtin tools directly on this runner's tool registry
+        // Sub-agent registries skip confirmation — their UI isn't wired up and would deadlock.
+        toolRegistry.skipConfirmation = true
+        toolRegistry.registerBuiltinTools(definition.builtinTools)
+
         // Connect to assigned MCP servers and discover tools
         await connectMCPServers()
         defer {
@@ -38,13 +61,34 @@ final class SubAgentRunner {
         session.setSystemPrompt(definition.systemPrompt)
         session.addUserMessage(task)
 
+        // Log the full system prompt for debugging
+        if let systemMsg = session.llmMessages.first(where: { $0.role == .system }) {
+            print("[SubAgentRunner:\(definition.id)] === SYSTEM PROMPT START ===")
+            print(systemMsg.content ?? "(empty)")
+            print("[SubAgentRunner:\(definition.id)] === SYSTEM PROMPT END ===")
+        } else {
+            print("[SubAgentRunner:\(definition.id)] WARNING: No system prompt in llmMessages!")
+        }
+
         let toolDefs = toolRegistry.enabledDefinitions
         let hasTools = !toolDefs.isEmpty
+        let builtinNames = Set(definition.builtinTools)
         var accumulatedResponse = ""
         var lastToolOutputs: [(name: String, output: String)] = []
+        var traceEntries: [TraceEntry] = []
+
+        // Helper to emit trace entries for live streaming
+        func emitTrace(_ entry: TraceEntry) {
+            traceEntries.append(entry)
+            onTraceEntry?(entry)
+        }
 
         for iteration in 0..<definition.maxToolCalls {
             try Task.checkCancellation()
+
+            let messageCount = session.llmMessages.count
+            let toolCount = hasTools ? toolDefs.count : 0
+            emitTrace(TraceEntry(.llmRequest(messageCount: messageCount, toolCount: toolCount, iteration: iteration + 1)))
 
             // Stream LLM response
             let response: ChatResponse
@@ -55,14 +99,24 @@ final class SubAgentRunner {
                     callbacks: callbacks
                 )
             } catch {
+                emitTrace(TraceEntry(.error("LLM error: \(error.localizedDescription)")))
                 if !lastToolOutputs.isEmpty {
                     let summary = lastToolOutputs.map { "[\($0.name)]\n\($0.output)" }.joined(separator: "\n\n")
                     let fallback = "LLM error after tool execution: \(error.localizedDescription)\n\nTool results:\n\(summary)"
                     session.addAssistantMessage(ChatMessage(role: .assistant, content: fallback))
-                    return fallback
+                    return RunResult(response: fallback, traceEntries: traceEntries)
                 }
                 throw error
             }
+
+            // Trace the LLM response
+            let toolCallSummaries: [ToolCallSummary]? = response.message.toolCalls?.map { call in
+                ToolCallSummary(from: call, isMCP: !builtinNames.contains(call.name))
+            }
+            emitTrace(TraceEntry(.llmResponse(
+                content: response.message.content,
+                toolCalls: toolCallSummaries
+            )))
 
             session.addAssistantMessage(response.message)
 
@@ -84,12 +138,14 @@ final class SubAgentRunner {
                 let prefixedName = "\(definition.id).\(call.name)"
                 await callbacks.onToolStart(prefixedName)
 
+                let start = Date()
                 let result: ToolResult
                 do {
                     result = try await toolRegistry.execute(call)
                 } catch {
                     result = .error("Tool '\(call.name)' threw: \(error.localizedDescription)")
                 }
+                let durationMs = Int(Date().timeIntervalSince(start) * 1000)
 
                 await callbacks.onToolEnd(prefixedName, result.isError)
 
@@ -97,12 +153,23 @@ final class SubAgentRunner {
                 session.addToolResult(content: truncated, toolCallId: call.id, toolName: call.name)
                 iterationOutputs.append((name: call.name, output: result.output))
 
+                // Trace the tool execution
+                emitTrace(TraceEntry(.toolExecution(ToolCallSummary(
+                    id: call.id,
+                    name: call.name,
+                    arguments: call.arguments,
+                    output: result.output,
+                    isError: result.isError,
+                    durationMs: durationMs,
+                    isMCP: !builtinNames.contains(call.name)
+                ))))
+
                 print("[SubAgentRunner:\(definition.id)] \(call.name): \(result.isError ? "ERROR" : "OK") (\(result.output.count) chars)")
             }
             lastToolOutputs = iterationOutputs
         }
 
-        return accumulatedResponse
+        return RunResult(response: accumulatedResponse, traceEntries: traceEntries)
     }
 
     // MARK: - MCP Connection

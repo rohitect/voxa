@@ -129,8 +129,100 @@ final class ChatSession: Identifiable, Codable {
     }
 
     /// Returns all messages suitable for sending to the LLM.
+    ///
+    /// Enforces API ordering rules:
+    /// - Tool-result messages must immediately follow their parent assistant tool-call message
+    /// - Assistant messages with tool calls must come after a user or tool message
+    /// - No consecutive assistant messages
+    /// - No orphaned tool results or tool calls without results
     var llmMessages: [ChatMessage] {
-        messages
+        // Pass 1: Group messages into valid sequences.
+        // A valid sequence is either:
+        //   [user]
+        //   [assistant(text only)]
+        //   [assistant(tool_calls), tool, tool, ...]  (complete tool round-trip)
+        // We walk the messages and build groups, dropping any broken ones.
+
+        struct MessageGroup {
+            var messages: [ChatMessage]
+        }
+
+        var groups: [MessageGroup] = []
+        var i = 0
+
+        while i < messages.count {
+            let msg = messages[i]
+
+            switch msg.role {
+            case .system:
+                groups.append(MessageGroup(messages: [msg]))
+                i += 1
+
+            case .user:
+                groups.append(MessageGroup(messages: [msg]))
+                i += 1
+
+            case .assistant:
+                if let calls = msg.toolCalls, !calls.isEmpty {
+                    // Collect the following tool result messages
+                    var group: [ChatMessage] = [msg]
+                    let expectedIDs = Set(calls.map(\.id))
+                    var foundIDs: Set<String> = []
+                    var j = i + 1
+                    while j < messages.count && messages[j].role == .tool {
+                        if let callId = messages[j].toolCallId, expectedIDs.contains(callId) {
+                            group.append(messages[j])
+                            foundIDs.insert(callId)
+                        }
+                        j += 1
+                    }
+
+                    if foundIDs == expectedIDs {
+                        // Complete tool round-trip — keep it
+                        groups.append(MessageGroup(messages: group))
+                    } else {
+                        // Incomplete — keep only the text content as a plain assistant message
+                        if let content = msg.content, !content.isEmpty {
+                            groups.append(MessageGroup(messages: [
+                                ChatMessage(role: .assistant, content: content)
+                            ]))
+                        }
+                    }
+                    i = j  // skip past the tool results we consumed
+
+                } else {
+                    // Plain text assistant message
+                    groups.append(MessageGroup(messages: [msg]))
+                    i += 1
+                }
+
+            case .tool:
+                // Orphaned tool result (not preceded by its assistant) — skip
+                i += 1
+            }
+        }
+
+        // Pass 2: Flatten groups, merging consecutive assistant-only groups
+        var result: [ChatMessage] = []
+        for group in groups {
+            let first = group.messages[0]
+
+            if first.role == .assistant && first.toolCalls == nil {
+                // Text-only assistant — merge with previous if also text-only assistant
+                if let lastIdx = result.indices.last,
+                   result[lastIdx].role == .assistant,
+                   result[lastIdx].toolCalls == nil {
+                    let merged = (result[lastIdx].content ?? "") + "\n" + (first.content ?? "")
+                    result[lastIdx] = ChatMessage(role: .assistant, content: merged)
+                } else {
+                    result.append(contentsOf: group.messages)
+                }
+            } else {
+                result.append(contentsOf: group.messages)
+            }
+        }
+
+        return result
     }
 
     // MARK: - Context Trimming
@@ -141,7 +233,30 @@ final class ChatSession: Identifiable, Codable {
         // Keep system prompt (first message if system) + last N messages
         let systemPrompt = messages.first?.role == .system ? messages.first : nil
         let keepCount = maxMessages - (systemPrompt != nil ? 1 : 0)
-        let recentMessages = Array(messages.suffix(keepCount))
+        let nonSystem = systemPrompt != nil ? Array(messages.dropFirst()) : messages
+        var startIndex = max(0, nonSystem.count - keepCount)
+
+        // Ensure we don't start on a tool-result message (which would be orphaned
+        // from its preceding assistant tool-call message). Walk forward until we
+        // land on a user or assistant message — never a bare tool result.
+        while startIndex < nonSystem.count && nonSystem[startIndex].role == .tool {
+            startIndex += 1
+        }
+
+        // Also check: if the first kept message is an assistant with toolCalls,
+        // but some/all of its tool results were trimmed, drop it too so the
+        // conversation starts cleanly on a user message.
+        if startIndex < nonSystem.count,
+           nonSystem[startIndex].role == .assistant,
+           let calls = nonSystem[startIndex].toolCalls, !calls.isEmpty {
+            // Skip past this assistant message and any following tool results
+            startIndex += 1
+            while startIndex < nonSystem.count && nonSystem[startIndex].role == .tool {
+                startIndex += 1
+            }
+        }
+
+        let recentMessages = Array(nonSystem.suffix(from: startIndex))
 
         messages.removeAll()
         if let systemPrompt {

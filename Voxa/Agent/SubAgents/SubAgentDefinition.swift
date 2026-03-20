@@ -1,6 +1,13 @@
 import Foundation
 
-/// Describes a sub-agent parsed from an agents.md file.
+/// A named category of tools with an SF Symbol icon, used for grouping tools in the UI.
+struct ToolCategory: Sendable, Equatable {
+    let name: String
+    let icon: String
+    let tools: [String]
+}
+
+/// Describes a sub-agent — either a built-in (hardcoded) or a custom agent loaded from an agents.md file.
 struct SubAgentDefinition: Identifiable, Sendable {
     let id: String
     var name: String
@@ -13,8 +20,18 @@ struct SubAgentDefinition: Identifiable, Sendable {
     var maxToolCalls: Int
     var isEnabled: Bool
 
+    /// Whether this is a built-in agent (cannot be deleted).
+    var isBuiltIn: Bool
+
     /// The file path this definition was loaded from (nil for unsaved new agents).
     var filePath: String?
+
+    /// Names of builtin tools to attach directly (not via MCP).
+    var builtinTools: [String]
+
+    /// Optional tool categories for grouping tools in the UI.
+    /// When non-empty, tools are displayed grouped by category instead of a flat list.
+    var toolCategories: [ToolCategory]
 
     init(
         id: String,
@@ -22,11 +39,14 @@ struct SubAgentDefinition: Identifiable, Sendable {
         description: String,
         systemPrompt: String,
         mcpServers: [String] = [],
+        builtinTools: [String] = [],
+        toolCategories: [ToolCategory] = [],
         providerOverride: String? = nil,
         modelOverride: String? = nil,
         timeout: TimeInterval = 60,
         maxToolCalls: Int = 5,
         isEnabled: Bool = true,
+        isBuiltIn: Bool = false,
         filePath: String? = nil
     ) {
         self.id = id
@@ -34,11 +54,14 @@ struct SubAgentDefinition: Identifiable, Sendable {
         self.description = description
         self.systemPrompt = systemPrompt
         self.mcpServers = mcpServers
+        self.builtinTools = builtinTools
+        self.toolCategories = toolCategories
         self.providerOverride = providerOverride
         self.modelOverride = modelOverride
         self.timeout = timeout
         self.maxToolCalls = maxToolCalls
         self.isEnabled = isEnabled
+        self.isBuiltIn = isBuiltIn
         self.filePath = filePath
     }
 }
@@ -47,6 +70,12 @@ struct SubAgentDefinition: Identifiable, Sendable {
 
 extension SubAgentDefinition {
 
+    /// IDs of built-in agents. Must be kept in sync with `builtInAgents`.
+    /// This is a static constant (not derived) to avoid infinite recursion,
+    /// since `computerUseAgent` → `parse()` → `builtInAgentIds` would otherwise
+    /// trigger `builtInAgents` → `computerUseAgent` again.
+    static let builtInAgentIds: Set<String> = ["computer_use_agent"]
+
     /// Directory where agents.md files live: ~/.voxa/agent/agents/
     static var agentsDirectory: URL {
         Constants.dataDirectory
@@ -54,11 +83,13 @@ extension SubAgentDefinition {
             .appendingPathComponent("agents", isDirectory: true)
     }
 
-    /// Load all sub-agent definitions from ~/.voxa/agent/agents/*.md
+    /// Load all sub-agent definitions: hardcoded built-ins + user-defined from ~/.voxa/agent/agents/*.md
     static func loadAll() -> [SubAgentDefinition] {
-        let dir = agentsDirectory
+        // Start with hardcoded built-in agents
+        var agents = builtInAgents
 
-        // Ensure directory exists
+        // Load user-defined agents from disk
+        let dir = agentsDirectory
         if !FileManager.default.fileExists(atPath: dir.path) {
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         }
@@ -67,26 +98,17 @@ extension SubAgentDefinition {
             at: dir, includingPropertiesForKeys: nil
         )) ?? []
 
-        let mdFiles = files.filter { $0.pathExtension == "md" }
+        let builtInIds = Set(builtInAgents.map(\.id))
 
-        // Bootstrap defaults if no agents.md files exist yet
-        if mdFiles.isEmpty {
-            bootstrapDefaults(in: dir)
-            // Re-read after bootstrap
-            guard let bootstrapped = try? FileManager.default.contentsOfDirectory(
-                at: dir, includingPropertiesForKeys: nil
-            ) else { return [] }
-            return bootstrapped.compactMap { url -> SubAgentDefinition? in
-                guard url.pathExtension == "md" else { return nil }
-                guard let content = try? String(contentsOf: url, encoding: .utf8) else { return nil }
-                return parse(markdown: content, filePath: url.path)
-            }
+        for url in files where url.pathExtension == "md" {
+            guard let content = try? String(contentsOf: url, encoding: .utf8),
+                  let parsed = parse(markdown: content, filePath: url.path) else { continue }
+            // Skip any user file that collides with a built-in agent ID
+            if builtInIds.contains(parsed.id) { continue }
+            agents.append(parsed)
         }
 
-        return mdFiles.compactMap { url -> SubAgentDefinition? in
-            guard let content = try? String(contentsOf: url, encoding: .utf8) else { return nil }
-            return parse(markdown: content, filePath: url.path)
-        }
+        return agents
     }
 
     /// Parse a single agents.md file into a SubAgentDefinition.
@@ -119,8 +141,9 @@ extension SubAgentDefinition {
         var description = ""
         var configLines: [String] = []
         var instructionLines: [String] = []
+        var categoryLines: [String] = []
 
-        enum Section { case none, description, config, instructions }
+        enum Section { case none, description, config, instructions, toolCategories }
         var currentSection: Section = .none
 
         for line in lines {
@@ -136,6 +159,12 @@ extension SubAgentDefinition {
             // ## Config
             if trimmed.lowercased().hasPrefix("## config") {
                 currentSection = .config
+                continue
+            }
+
+            // ## Tool Categories
+            if trimmed.lowercased().hasPrefix("## tool categories") {
+                currentSection = .toolCategories
                 continue
             }
 
@@ -161,6 +190,10 @@ extension SubAgentDefinition {
                 if trimmed.hasPrefix("- ") {
                     configLines.append(String(trimmed.dropFirst(2)))
                 }
+            case .toolCategories:
+                if trimmed.hasPrefix("- ") {
+                    categoryLines.append(String(trimmed.dropFirst(2)))
+                }
             case .instructions:
                 instructionLines.append(line)
             case .none:
@@ -178,6 +211,7 @@ extension SubAgentDefinition {
         var providerOverride: String?
         var modelOverride: String?
         var isEnabled = true
+        var builtinToolNames: [String] = []
 
         for configLine in configLines {
             let parts = configLine.split(separator: ":", maxSplits: 1)
@@ -190,6 +224,10 @@ extension SubAgentDefinition {
                 id = value.lowercased().replacingOccurrences(of: " ", with: "_")
             case "mcp servers", "mcp_servers":
                 mcpServerIds = value.split(separator: ",").map {
+                    $0.trimmingCharacters(in: .whitespaces)
+                }
+            case "builtin tools", "builtin_tools":
+                builtinToolNames = value.split(separator: ",").map {
                     $0.trimmingCharacters(in: .whitespaces)
                 }
             case "timeout":
@@ -207,6 +245,36 @@ extension SubAgentDefinition {
             }
         }
 
+        // Parse tool categories
+        // Format: "Category Name [sf.symbol]: tool1, tool2, tool3"
+        var toolCategories: [ToolCategory] = []
+        for catLine in categoryLines {
+            // Split on ":" to get name+icon and tools
+            let catParts = catLine.split(separator: ":", maxSplits: 1)
+            guard catParts.count == 2 else { continue }
+
+            let nameAndIcon = catParts[0].trimmingCharacters(in: .whitespaces)
+            let toolsStr = catParts[1].trimmingCharacters(in: .whitespaces)
+
+            // Extract icon from [brackets] if present
+            var categoryName = nameAndIcon
+            var icon = "wrench"
+            if let bracketStart = nameAndIcon.firstIndex(of: "["),
+               let bracketEnd = nameAndIcon.firstIndex(of: "]"),
+               bracketStart < bracketEnd {
+                icon = String(nameAndIcon[nameAndIcon.index(after: bracketStart)..<bracketEnd])
+                categoryName = String(nameAndIcon[..<bracketStart]).trimmingCharacters(in: .whitespaces)
+            }
+
+            let tools = toolsStr.split(separator: ",").map {
+                $0.trimmingCharacters(in: .whitespaces)
+            }
+
+            if !tools.isEmpty {
+                toolCategories.append(ToolCategory(name: categoryName, icon: icon, tools: tools))
+            }
+        }
+
         // Build system prompt from instructions section
         let systemPrompt = instructionLines
             .joined(separator: "\n")
@@ -218,11 +286,14 @@ extension SubAgentDefinition {
             description: description,
             systemPrompt: systemPrompt,
             mcpServers: mcpServerIds,
+            builtinTools: builtinToolNames,
+            toolCategories: toolCategories,
             providerOverride: providerOverride,
             modelOverride: modelOverride,
             timeout: timeout,
             maxToolCalls: maxToolCalls,
             isEnabled: isEnabled,
+            isBuiltIn: builtInAgentIds.contains(id),
             filePath: filePath
         )
     }
@@ -236,6 +307,9 @@ extension SubAgentDefinition {
         if !mcpServers.isEmpty {
             md += "- MCP Servers: \(mcpServers.joined(separator: ", "))\n"
         }
+        if !builtinTools.isEmpty {
+            md += "- Builtin Tools: \(builtinTools.joined(separator: ", "))\n"
+        }
         md += "- Timeout: \(Int(timeout))\n"
         md += "- Max tool calls: \(maxToolCalls)\n"
         if let provider = providerOverride {
@@ -245,6 +319,12 @@ extension SubAgentDefinition {
             md += "- Model: \(model)\n"
         }
         md += "- Enabled: \(isEnabled)\n"
+        if !toolCategories.isEmpty {
+            md += "\n## Tool Categories\n"
+            for cat in toolCategories {
+                md += "- \(cat.name) [\(cat.icon)]: \(cat.tools.joined(separator: ", "))\n"
+            }
+        }
         md += "\n## Instructions\n\n"
         md += systemPrompt + "\n"
         return md
@@ -271,43 +351,39 @@ extension SubAgentDefinition {
         try? FileManager.default.removeItem(atPath: path)
     }
 
-    // MARK: - Default Agents (bootstrapped on first launch)
+    // MARK: - Built-in Agents
 
-    private static func bootstrapDefaults(in directory: URL) {
-        let computerAgent = SubAgentDefinition(
-            id: "computer",
-            name: "Computer",
-            description: "Full computer control — launches apps, changes settings, searches files, captures screen, runs commands, automates UI.",
-            systemPrompt: """
-                You are a macOS computer control agent. You help users accomplish tasks on their Mac.
-
-                Execute actions directly — don't describe steps, just do them. \
-                Chain multiple tools when needed to accomplish complex tasks. \
-                If something fails, try an alternative approach.
-
-                Be concise in your responses since this is a voice interface.
-                """,
-            timeout: 120,
-            maxToolCalls: 10
-        )
-
-        let writerAgent = SubAgentDefinition(
-            id: "writer",
-            name: "Writer",
-            description: "Drafts and refines text, places results on the clipboard.",
-            systemPrompt: """
-                You are a writing assistant agent. You help users draft, edit, and refine text. \
-                Place your final output on the clipboard so the user can paste it.
-
-                Match the user's tone and style. Be concise unless asked for longer form content.
-                """,
-            timeout: 30,
-            maxToolCalls: 2
-        )
-
-        for agent in [computerAgent, writerAgent] {
-            let url = directory.appendingPathComponent("\(agent.id).md")
-            try? agent.toMarkdown().write(to: url, atomically: true, encoding: .utf8)
+    /// Load the Computer Use Agent from the bundled `computer_use_agent.md` resource.
+    /// Falls back to a minimal hardcoded definition if the resource is missing or unparseable.
+    static var computerUseAgent: SubAgentDefinition {
+        if let url = Bundle.main.url(forResource: "computer_use_agent", withExtension: "md"),
+           let content = try? String(contentsOf: url, encoding: .utf8),
+           var parsed = parse(markdown: content, filePath: url.path) {
+            parsed.isBuiltIn = true
+            return parsed
         }
+
+        // Fallback — should never happen in a properly bundled app
+        return SubAgentDefinition(
+            id: "computer_use_agent",
+            name: "Computer Use Agent",
+            description: "Full computer control — launches apps, changes settings, searches files, captures screen, runs commands, automates UI.",
+            systemPrompt: "You are a macOS computer control agent. You help users accomplish tasks on their Mac by directly interacting with the system using your tools.",
+            builtinTools: [
+                "screen_capture", "ui_automation", "mouse", "keyboard", "clipboard",
+                "file_read", "file_write", "list_directory", "file_search", "file_operations",
+                "app_launcher", "window_management", "system_settings",
+                "shell_command", "applescript", "shortcuts", "system_info", "notification"
+            ],
+            timeout: 120,
+            maxToolCalls: 15,
+            isEnabled: true,
+            isBuiltIn: true
+        )
+    }
+
+    /// All built-in agents.
+    static var builtInAgents: [SubAgentDefinition] {
+        [computerUseAgent]
     }
 }
