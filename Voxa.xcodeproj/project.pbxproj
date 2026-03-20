@@ -8,12 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		0A1B2C3D4E5F6A7B8C9D0E1F /* ParakeetEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F7A8B9C0D1E2F /* ParakeetEngine.swift */; };
-		2B3C4D5E6F7A8B9C0D1E2F3A /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = 4D5E6F7A8B9C0D1E2F3A4B5C /* FluidAudio */; };
 		0B6EF18E8CDD05CB05398430 /* TextCleanupEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 752B1E26D16B132B33242D9D /* TextCleanupEngine.swift */; };
 		13F2ACA4B0FA426946CFBECF /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25871F13F85E7402CCEE5173 /* HotkeyManager.swift */; };
+		197046FE96DAA0EC73777141 /* TraceInspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81C64D3989FB1328C7EA68BC /* TraceInspectorView.swift */; };
 		20276B62B8418E999BFF83C0 /* TranscriptionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7433663EC6F3EEC236140B2 /* TranscriptionEngine.swift */; };
 		260F46C58459F3CD6A34F8D5 /* OllamaClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2516F4448C3044FEE581258 /* OllamaClient.swift */; };
 		27A4E65828956F6B846DEAB8 /* TextInjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5BD0E36627EEB45E979811A /* TextInjector.swift */; };
+		2B3C4D5E6F7A8B9C0D1E2F3A /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = 4D5E6F7A8B9C0D1E2F3A4B5C /* FluidAudio */; };
 		37376D028A4541FB269A8116 /* PushToTalkMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 209876A84D2CA5D4F2D3A641 /* PushToTalkMode.swift */; };
 		50D4E09EF8F8CE73444A3A40 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88BA31645D44625C8F1A704A /* Constants.swift */; };
 		55BB81C54B4843103A174F8E /* AudioEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD1823E065D2F7C6D58A4B09 /* AudioEngine.swift */; };
@@ -24,62 +25,79 @@
 		869F466ED4A327B0BDC6EAD7 /* ModelDownloadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB859B3D0A611EC208E91D51 /* ModelDownloadView.swift */; };
 		8F9D6490741B9F92866BF08B /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B81DE9FD96DC94636D6C28A /* MenuBarView.swift */; };
 		9CD44CA01F236E79D165D525 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F659874E215B9F71C3C03CE3 /* SoundManager.swift */; };
+		'AA01020304050607' = {isa = PBXBuildFile; fileRef = BB01020304050607; };
+		'AA02030405060708' = {isa = PBXBuildFile; fileRef = BB02030405060708; };
+		'AA03040506070809' = {isa = PBXBuildFile; fileRef = BB03040506070809; };
+		'AA04050607080910' = {isa = PBXBuildFile; fileRef = BB04050607080910; };
+		'AA05060708091011' = {isa = PBXBuildFile; fileRef = BB05060708091011; };
+		'AA06070809101112' = {isa = PBXBuildFile; fileRef = BB06070809101112; };
+		'AA07080910111213' = {isa = PBXBuildFile; fileRef = BB07080910111213; };
+		'AA08091011121314' = {isa = PBXBuildFile; fileRef = BB08091011121314; };
+		'AA09101112131415' = {isa = PBXBuildFile; fileRef = BB09101112131415; };
+		'AA10111213141516' = {isa = PBXBuildFile; fileRef = BB10111213141516; };
+		'AA11121314151617' = {isa = PBXBuildFile; fileRef = BB11121314151617; };
+		'AA12131415161718' = {isa = PBXBuildFile; fileRef = BB12131415161718; };
+		'AA13141516171819' = {isa = PBXBuildFile; fileRef = BB13141516171819; };
+		'AA14151617181920' = {isa = PBXBuildFile; fileRef = BB14151617181920; };
+		'AA15161718192021' = {isa = PBXBuildFile; fileRef = BB15161718192021; };
+		'AA16171819202122' = {isa = PBXBuildFile; fileRef = BB16171819202122; };
+		'AA17181920212223' = {isa = PBXBuildFile; fileRef = BB17181920212223; };
+		'AA18192021222324' = {isa = PBXBuildFile; fileRef = BB18192021222324; };
+		'AA18192021222325' = {isa = PBXBuildFile; fileRef = BB18192021222325; };
+		'AA18192021222326' = {isa = PBXBuildFile; fileRef = BB18192021222326; };
+		'AA18192021222327' = {isa = PBXBuildFile; fileRef = BB18192021222327; };
+		'AA18192021222328' = {isa = PBXBuildFile; fileRef = BB18192021222328; };
+		'AA19202122232425' = {isa = PBXBuildFile; fileRef = BB19202122232425; };
+		'AA20212223242526' = {isa = PBXBuildFile; fileRef = BB20212223242526; };
+		'AA21222324252627' = {isa = PBXBuildFile; fileRef = BB21222324252627; };
+		'AA22232425262728' = {isa = PBXBuildFile; fileRef = BB22232425262728; };
+		'AA23242526272829' = {isa = PBXBuildFile; fileRef = BB23242526272829; };
+		'AA24252627282930' = {isa = PBXBuildFile; fileRef = BB24252627282930; };
 		B088CFA23B3A8048F0BD13B9 /* DictionaryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AECC1FC9EDAB7C9BCD68E44 /* DictionaryManager.swift */; };
 		C0FBFF9FB00D764D693257CD /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3427E9DA792E8FE869A23A1B /* WhisperKit */; };
 		CD52015A37EE22353F01EE45 /* TranscriptionHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19D0DB873F7BEA23E75C2F1E /* TranscriptionHistory.swift */; };
 		CF74DDAAE8C176BDAF9D3C3F /* ModelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5908D921F68AB538C5B92896 /* ModelManager.swift */; };
 		DAB9103DDD718A42477C2F53 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08EC3F1EB29314EEF956810C /* OnboardingView.swift */; };
 		DC8EDDDB34794C9E2483F61D /* FloatingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D5738B6DCBF246FDD10B1A8 /* FloatingIndicator.swift */; };
+		'DD01010101010101' = {isa = PBXBuildFile; fileRef = CC01010101010101; };
+		'DD02020202020202' = {isa = PBXBuildFile; fileRef = CC02020202020202; };
+		'DD03030303030303' = {isa = PBXBuildFile; fileRef = CC03030303030303; };
+		'DD04040404040404' = {isa = PBXBuildFile; fileRef = CC04040404040404; };
+		'DD05050505050505' = {isa = PBXBuildFile; fileRef = CC05050505050505; };
+		'DD05050505050506' = {isa = PBXBuildFile; fileRef = CC05050505050506; };
+		'DD06060606060606' = {isa = PBXBuildFile; fileRef = CC06060606060606; };
+		'DD07070707070707' = {isa = PBXBuildFile; productRef = CC09090909090909; };
+		'DD08080808080808' = {isa = PBXBuildFile; fileRef = CC10101010101010; };
+		'DD09090909090909' = {isa = PBXBuildFile; fileRef = CC11111111111111; };
 		E00CF06F397576234F8FF3DB /* FlowMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98915D73ECF0366662F8567A /* FlowMode.swift */; };
 		E14BB620375CC298AFEC00D8 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D27B961265B9D4798FDDC89 /* SettingsView.swift */; };
 		E49EE3F88FD38FD038D9CA06 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DE57DDBF362E947D2BE8C82 /* Logger.swift */; };
 		F339102B90E529A39082E59A /* CommandMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84544E9583887B72EA52DC39 /* CommandMode.swift */; };
+		F4AD4F39888934581BD80420 /* MessageTrace.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE394A06B81B407ADC503688 /* MessageTrace.swift */; };
 		F74FFDCADA5DCB7C7FBDDF63 /* DictationMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6B812B93F88479C67D3BCB0 /* DictationMode.swift */; };
-		AA01020304050607 /* ChatTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB01020304050607 /* ChatTypes.swift */; };
-		AA02030405060708 /* LLMProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB02030405060708 /* LLMProvider.swift */; };
-		AA03040506070809 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB03040506070809 /* KeychainHelper.swift */; };
-		AA04050607080910 /* OllamaProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB04050607080910 /* OllamaProvider.swift */; };
-		AA05060708091011 /* OpenAIProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB05060708091011 /* OpenAIProvider.swift */; };
-		AA06070809101112 /* GeminiProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB06070809101112 /* GeminiProvider.swift */; };
-		AA07080910111213 /* LLMProviderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB07080910111213 /* LLMProviderManager.swift */; };
-		AA08091011121314 /* AgentCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB08091011121314 /* AgentCoordinator.swift */; };
-		AA09101112131415 /* AgentTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB09101112131415 /* AgentTool.swift */; };
-		AA10111213141516 /* ToolSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB10111213141516 /* ToolSettings.swift */; };
-		AA11121314151617 /* ToolRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB11121314151617 /* ToolRegistry.swift */; };
-		AA12131415161718 /* AppLauncherTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB12131415161718 /* AppLauncherTool.swift */; };
-		AA13141516171819 /* ClipboardTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB13141516171819 /* ClipboardTool.swift */; };
-		AA14151617181920 /* ScreenCaptureTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB14151617181920 /* ScreenCaptureTool.swift */; };
-		AA15161718192021 /* UIAutomationTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB15161718192021 /* UIAutomationTool.swift */; };
-		AA16171819202122 /* FileSearchTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB16171819202122 /* FileSearchTool.swift */; };
-		AA17181920212223 /* SystemSettingsTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB17181920212223 /* SystemSettingsTool.swift */; };
-		AA18192021222324 /* ShellCommandTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB18192021222324 /* ShellCommandTool.swift */; };
-		AA19202122232425 /* AgentResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB19202122232425 /* AgentResponse.swift */; };
-		AA20212223242526 /* IntentClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB20212223242526 /* IntentClassifier.swift */; };
-		AA21222324252627 /* ChatSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB21222324252627 /* ChatSession.swift */; };
-		AA22232425262728 /* AgentExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22232425262728 /* AgentExecutor.swift */; };
-		AA23242526272829 /* AgentPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB23242526272829 /* AgentPanel.swift */; };
-		AA24252627282930 /* AgentPanelContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB24252627282930 /* AgentPanelContent.swift */; };
-		DD01010101010101 /* MCPServerConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC01010101010101 /* MCPServerConfig.swift */; };
-		DD02020202020202 /* MCPTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC02020202020202 /* MCPTypes.swift */; };
-		DD03030303030303 /* MCPConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC03030303030303 /* MCPConnection.swift */; };
-		DD04040404040404 /* MCPToolAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC04040404040404 /* MCPToolAdapter.swift */; };
-		DD05050505050505 /* MCPManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC05050505050505 /* MCPManager.swift */; };
-		DD06060606060606 /* MCPSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC06060606060606 /* MCPSettingsView.swift */; };
-		DD07070707070707 /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = CC09090909090909 /* MCP */; };
-		DD08080808080808 /* AgentChatPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC10101010101010 /* AgentChatPage.swift */; };
-		DD09090909090909 /* ConversationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11111111111111 /* ConversationStore.swift */; };
-		FF01010101010101 /* SubAgentDefinition.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE01010101010101 /* SubAgentDefinition.swift */; };
-		FF02020202020202 /* SubAgentRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE02020202020202 /* SubAgentRunner.swift */; };
-		FF03030303030303 /* SubAgentManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE03030303030303 /* SubAgentManager.swift */; };
-		FF04040404040404 /* DelegateToAgentTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE04040404040404 /* DelegateToAgentTool.swift */; };
-		FF05050505050505 /* SubAgentSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE05050505050505 /* SubAgentSettingsView.swift */; };
+		'FF01010101010101' = {isa = PBXBuildFile; fileRef = EE01010101010101; };
+		'FF02020202020202' = {isa = PBXBuildFile; fileRef = EE02020202020202; };
+		'FF03030303030303' = {isa = PBXBuildFile; fileRef = EE03030303030303; };
+		'FF04040404040404' = {isa = PBXBuildFile; fileRef = EE04040404040404; };
+		'FF05050505050505' = {isa = PBXBuildFile; fileRef = EE05050505050505; };
+		'GG01010101010101' = {isa = PBXBuildFile; fileRef = HH01010101010101; };
+		'GG02020202020202' = {isa = PBXBuildFile; fileRef = HH02020202020202; };
+		'GG03030303030303' = {isa = PBXBuildFile; fileRef = HH03030303030303; };
+		'GG04040404040404' = {isa = PBXBuildFile; fileRef = HH04040404040404; };
+		'MM01010101010101' = {isa = PBXBuildFile; fileRef = MM02020202020202; };
+		'PP01010101010101' = {isa = PBXBuildFile; fileRef = QQ01010101010101; };
+		'PP02020202020202' = {isa = PBXBuildFile; fileRef = QQ02020202020202; };
+		'PP03030303030303' = {isa = PBXBuildFile; fileRef = QQ03030303030303; };
+		'PP04040404040404' = {isa = PBXBuildFile; fileRef = QQ04040404040404; };
+		'PP05050505050505' = {isa = PBXBuildFile; fileRef = QQ05050505050505; };
+		'VT01010101010101' = {isa = PBXBuildFile; fileRef = VT02020202020202; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		1A2B3C4D5E6F7A8B9C0D1E2F /* ParakeetEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetEngine.swift; sourceTree = "<group>"; };
 		08EC3F1EB29314EEF956810C /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		0AECC1FC9EDAB7C9BCD68E44 /* DictionaryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryManager.swift; sourceTree = "<group>"; };
 		19D0DB873F7BEA23E75C2F1E /* TranscriptionHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionHistory.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F7A8B9C0D1E2F /* ParakeetEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetEngine.swift; sourceTree = "<group>"; };
 		1DFF09DEC0FA8C731AF85AAE /* ShortcutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutManager.swift; sourceTree = "<group>"; };
 		209876A84D2CA5D4F2D3A641 /* PushToTalkMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushToTalkMode.swift; sourceTree = "<group>"; };
 		25871F13F85E7402CCEE5173 /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
@@ -89,6 +107,7 @@
 		5908D921F68AB538C5B92896 /* ModelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelManager.swift; sourceTree = "<group>"; };
 		752B1E26D16B132B33242D9D /* TextCleanupEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextCleanupEngine.swift; sourceTree = "<group>"; };
 		7B81DE9FD96DC94636D6C28A /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
+		81C64D3989FB1328C7EA68BC /* TraceInspectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TraceInspectorView.swift; path = Voxa/UI/TraceInspectorView.swift; sourceTree = SOURCE_ROOT; };
 		84544E9583887B72EA52DC39 /* CommandMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandMode.swift; sourceTree = "<group>"; };
 		887326365594FC66AB8017C9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		88BA31645D44625C8F1A704A /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
@@ -98,50 +117,67 @@
 		AEC105248C8759342B689409 /* PermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionManager.swift; sourceTree = "<group>"; };
 		B28A7372282125867EC6D720 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B99402AD2F3FBC19978C0D27 /* Voxa.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Voxa.entitlements; sourceTree = "<group>"; };
+		'BB01020304050607' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTypes.swift; sourceTree = "<group>"; };
+		'BB02030405060708' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProvider.swift; sourceTree = "<group>"; };
+		'BB03040506070809' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
+		'BB04050607080910' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaProvider.swift; sourceTree = "<group>"; };
+		'BB05060708091011' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIProvider.swift; sourceTree = "<group>"; };
+		'BB06070809101112' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiProvider.swift; sourceTree = "<group>"; };
+		'BB07080910111213' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProviderManager.swift; sourceTree = "<group>"; };
+		'BB08091011121314' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentCoordinator.swift; sourceTree = "<group>"; };
+		'BB09101112131415' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentTool.swift; sourceTree = "<group>"; };
+		'BB10111213141516' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolSettings.swift; sourceTree = "<group>"; };
+		'BB11121314151617' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolRegistry.swift; sourceTree = "<group>"; };
+		'BB12131415161718' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLauncherTool.swift; sourceTree = "<group>"; };
+		'BB13141516171819' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardTool.swift; sourceTree = "<group>"; };
+		'BB14151617181920' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCaptureTool.swift; sourceTree = "<group>"; };
+		'BB15161718192021' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIAutomationTool.swift; sourceTree = "<group>"; };
+		'BB16171819202122' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSearchTool.swift; sourceTree = "<group>"; };
+		'BB17181920212223' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSettingsTool.swift; sourceTree = "<group>"; };
+		'BB18192021222324' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellCommandTool.swift; sourceTree = "<group>"; };
+		'BB18192021222325' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleScriptTool.swift; sourceTree = "<group>"; };
+		'BB18192021222326' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWriteTool.swift; sourceTree = "<group>"; };
+		'BB18192021222327' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileReadTool.swift; sourceTree = "<group>"; };
+		'BB18192021222328' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListDirectoryTool.swift; sourceTree = "<group>"; };
+		'BB19202122232425' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentResponse.swift; sourceTree = "<group>"; };
+		'BB20212223242526' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentClassifier.swift; sourceTree = "<group>"; };
+		'BB21222324252627' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSession.swift; sourceTree = "<group>"; };
+		'BB22232425262728' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentExecutor.swift; sourceTree = "<group>"; };
+		'BB23242526272829' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentPanel.swift; sourceTree = "<group>"; };
+		'BB24252627282930' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentPanelContent.swift; sourceTree = "<group>"; };
 		C19EC1FC8BBC2C5090B92A07 /* Voxa.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Voxa.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CB859B3D0A611EC208E91D51 /* ModelDownloadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelDownloadView.swift; sourceTree = "<group>"; };
+		'CC01010101010101' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServerConfig.swift; sourceTree = "<group>"; };
+		'CC02020202020202' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPTypes.swift; sourceTree = "<group>"; };
+		'CC03030303030303' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPConnection.swift; sourceTree = "<group>"; };
+		'CC04040404040404' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPToolAdapter.swift; sourceTree = "<group>"; };
+		'CC05050505050505' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPManager.swift; sourceTree = "<group>"; };
+		'CC05050505050506' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPInstaller.swift; sourceTree = "<group>"; };
+		'CC06060606060606' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPSettingsView.swift; sourceTree = "<group>"; };
+		'CC10101010101010' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentChatPage.swift; sourceTree = "<group>"; };
+		'CC11111111111111' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationStore.swift; sourceTree = "<group>"; };
+		CE394A06B81B407ADC503688 /* MessageTrace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MessageTrace.swift; path = Voxa/Agent/MessageTrace.swift; sourceTree = SOURCE_ROOT; };
 		D5BD0E36627EEB45E979811A /* TextInjector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextInjector.swift; sourceTree = "<group>"; };
+		'EE01010101010101' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubAgentDefinition.swift; sourceTree = "<group>"; };
+		'EE02020202020202' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubAgentRunner.swift; sourceTree = "<group>"; };
+		'EE03030303030303' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubAgentManager.swift; sourceTree = "<group>"; };
+		'EE04040404040404' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DelegateToAgentTool.swift; sourceTree = "<group>"; };
+		'EE05050505050505' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubAgentSettingsView.swift; sourceTree = "<group>"; };
 		F2516F4448C3044FEE581258 /* OllamaClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaClient.swift; sourceTree = "<group>"; };
 		F659874E215B9F71C3C03CE3 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
 		F7433663EC6F3EEC236140B2 /* TranscriptionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionEngine.swift; sourceTree = "<group>"; };
 		FD1823E065D2F7C6D58A4B09 /* AudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEngine.swift; sourceTree = "<group>"; };
-		BB01020304050607 /* ChatTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTypes.swift; sourceTree = "<group>"; };
-		BB02030405060708 /* LLMProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProvider.swift; sourceTree = "<group>"; };
-		BB03040506070809 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
-		BB04050607080910 /* OllamaProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaProvider.swift; sourceTree = "<group>"; };
-		BB05060708091011 /* OpenAIProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIProvider.swift; sourceTree = "<group>"; };
-		BB06070809101112 /* GeminiProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiProvider.swift; sourceTree = "<group>"; };
-		BB07080910111213 /* LLMProviderManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProviderManager.swift; sourceTree = "<group>"; };
-		BB08091011121314 /* AgentCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentCoordinator.swift; sourceTree = "<group>"; };
-		BB09101112131415 /* AgentTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentTool.swift; sourceTree = "<group>"; };
-		BB10111213141516 /* ToolSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolSettings.swift; sourceTree = "<group>"; };
-		BB11121314151617 /* ToolRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolRegistry.swift; sourceTree = "<group>"; };
-		BB12131415161718 /* AppLauncherTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLauncherTool.swift; sourceTree = "<group>"; };
-		BB13141516171819 /* ClipboardTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardTool.swift; sourceTree = "<group>"; };
-		BB14151617181920 /* ScreenCaptureTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCaptureTool.swift; sourceTree = "<group>"; };
-		BB15161718192021 /* UIAutomationTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIAutomationTool.swift; sourceTree = "<group>"; };
-		BB16171819202122 /* FileSearchTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSearchTool.swift; sourceTree = "<group>"; };
-		BB17181920212223 /* SystemSettingsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSettingsTool.swift; sourceTree = "<group>"; };
-		BB18192021222324 /* ShellCommandTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellCommandTool.swift; sourceTree = "<group>"; };
-		BB19202122232425 /* AgentResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentResponse.swift; sourceTree = "<group>"; };
-		BB20212223242526 /* IntentClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentClassifier.swift; sourceTree = "<group>"; };
-		BB21222324252627 /* ChatSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSession.swift; sourceTree = "<group>"; };
-		BB22232425262728 /* AgentExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentExecutor.swift; sourceTree = "<group>"; };
-		BB23242526272829 /* AgentPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentPanel.swift; sourceTree = "<group>"; };
-		BB24252627282930 /* AgentPanelContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentPanelContent.swift; sourceTree = "<group>"; };
-		CC01010101010101 /* MCPServerConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServerConfig.swift; sourceTree = "<group>"; };
-		CC02020202020202 /* MCPTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPTypes.swift; sourceTree = "<group>"; };
-		CC03030303030303 /* MCPConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPConnection.swift; sourceTree = "<group>"; };
-		CC04040404040404 /* MCPToolAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPToolAdapter.swift; sourceTree = "<group>"; };
-		CC05050505050505 /* MCPManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPManager.swift; sourceTree = "<group>"; };
-		CC06060606060606 /* MCPSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPSettingsView.swift; sourceTree = "<group>"; };
-		CC10101010101010 /* AgentChatPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentChatPage.swift; sourceTree = "<group>"; };
-		CC11111111111111 /* ConversationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationStore.swift; sourceTree = "<group>"; };
-		EE01010101010101 /* SubAgentDefinition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubAgentDefinition.swift; sourceTree = "<group>"; };
-		EE02020202020202 /* SubAgentRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubAgentRunner.swift; sourceTree = "<group>"; };
-		EE03030303030303 /* SubAgentManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubAgentManager.swift; sourceTree = "<group>"; };
-		EE04040404040404 /* DelegateToAgentTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DelegateToAgentTool.swift; sourceTree = "<group>"; };
-		EE05050505050505 /* SubAgentSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubAgentSettingsView.swift; sourceTree = "<group>"; };
+		'HH01010101010101' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionState.swift; sourceTree = "<group>"; };
+		'HH02020202020202' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionWindow.swift; sourceTree = "<group>"; };
+		'HH03030303030303' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionView.swift; sourceTree = "<group>"; };
+		'HH04040404040404' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionAnimations.swift; sourceTree = "<group>"; };
+		'MM02020202020202' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownView.swift; sourceTree = "<group>"; };
+		'QQ01010101010101' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonaManager.swift; sourceTree = "<group>"; };
+		'QQ02020202020202' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryExtractor.swift; sourceTree = "<group>"; };
+		'QQ03030303030303' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SemanticMemoryStore.swift; sourceTree = "<group>"; };
+		'QQ04040404040404' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryEntry.swift; sourceTree = "<group>"; };
+		'QQ05050505050505' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyLogger.swift; sourceTree = "<group>"; };
+		'VT02020202020202' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoxaTheme.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -151,7 +187,7 @@
 			files = (
 				C0FBFF9FB00D764D693257CD /* WhisperKit in Frameworks */,
 				2B3C4D5E6F7A8B9C0D1E2F3A /* FluidAudio in Frameworks */,
-				DD07070707070707 /* MCP in Frameworks */,
+				DD07070707070707,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -210,22 +246,27 @@
 			children = (
 				B400D1AF80996024A55C9E00 /* Voxa */,
 				1D21D1D46F5ACBE89EA488D3 /* Products */,
+				CE394A06B81B407ADC503688 /* MessageTrace.swift */,
+				81C64D3989FB1328C7EA68BC /* TraceInspectorView.swift */,
 			);
 			sourceTree = "<group>";
 		};
 		AF9C450FE148B7CC1BA230CD /* UI */ = {
 			isa = PBXGroup;
 			children = (
-				CC10101010101010 /* AgentChatPage.swift */,
-				BB23242526272829 /* AgentPanel.swift */,
-				BB24252627282930 /* AgentPanelContent.swift */,
+				CC10101010101010,
+				BB23242526272829,
+				BB24252627282930,
+				GG10101010101010,
 				3D5738B6DCBF246FDD10B1A8 /* FloatingIndicator.swift */,
-				CC06060606060606 /* MCPSettingsView.swift */,
+				MM02020202020202,
+				CC06060606060606,
 				7B81DE9FD96DC94636D6C28A /* MenuBarView.swift */,
 				CB859B3D0A611EC208E91D51 /* ModelDownloadView.swift */,
 				08EC3F1EB29314EEF956810C /* OnboardingView.swift */,
 				4D27B961265B9D4798FDDC89 /* SettingsView.swift */,
-				EE05050505050505 /* SubAgentSettingsView.swift */,
+				EE05050505050505,
+				VT02020202020202,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -236,7 +277,7 @@
 				B28A7372282125867EC6D720 /* Info.plist */,
 				B99402AD2F3FBC19978C0D27 /* Voxa.entitlements */,
 				9E8F971582777A3E0EADED22 /* VoxaApp.swift */,
-				CC10111213141516 /* Agent */,
+				CC10111213141516,
 				CC60702827627960D72A5B6D /* Core */,
 				FF98EB7D4EE2F77788AEA465 /* Models */,
 				10C0BE5824F6344123A80459 /* Modes */,
@@ -245,6 +286,88 @@
 				5958168996F3F34566450FA7 /* Utilities */,
 			);
 			path = Voxa;
+			sourceTree = "<group>";
+		};
+		'CC07070707070707' = {
+			isa = PBXGroup;
+			children = (
+				CC03030303030303,
+				CC05050505050506,
+				CC05050505050505,
+				CC01010101010101,
+				CC04040404040404,
+				CC02020202020202,
+			);
+			path = MCP;
+			sourceTree = "<group>";
+		};
+		'CC10111213141516' = {
+			isa = PBXGroup;
+			children = (
+				BB08091011121314,
+				BB22232425262728,
+				BB19202122232425,
+				BB21222324252627,
+				CC11111111111111,
+				BB20212223242526,
+				CC20212223242526,
+				CC07070707070707,
+				PP10101010101010,
+				EE10101010101010,
+				CC40414243444546,
+				CC30313233343536,
+			);
+			path = Agent;
+			sourceTree = "<group>";
+		};
+		'CC20212223242526' = {
+			isa = PBXGroup;
+			children = (
+				BB01020304050607,
+				BB06070809101112,
+				BB07080910111213,
+				BB02030405060708,
+				BB04050607080910,
+				BB05060708091011,
+			);
+			path = LLM;
+			sourceTree = "<group>";
+		};
+		'CC30313233343536' = {
+			isa = PBXGroup;
+			children = (
+				BB03040506070809,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		'CC40414243444546' = {
+			isa = PBXGroup;
+			children = (
+				BB09101112131415,
+				BB10111213141516,
+				BB11121314151617,
+				CC50515253545556,
+			);
+			path = Tools;
+			sourceTree = "<group>";
+		};
+		'CC50515253545556' = {
+			isa = PBXGroup;
+			children = (
+				BB18192021222325,
+				BB12131415161718,
+				BB13141516171819,
+				BB18192021222327,
+				BB16171819202122,
+				BB18192021222326,
+				BB18192021222328,
+				BB14151617181920,
+				BB18192021222324,
+				BB17181920212223,
+				BB15161718192021,
+			);
+			path = Builtin;
 			sourceTree = "<group>";
 		};
 		CC60702827627960D72A5B6D /* Core */ = {
@@ -260,6 +383,17 @@
 			path = Core;
 			sourceTree = "<group>";
 		};
+		'EE10101010101010' = {
+			isa = PBXGroup;
+			children = (
+				EE04040404040404,
+				EE01010101010101,
+				EE03030303030303,
+				EE02020202020202,
+			);
+			path = SubAgents;
+			sourceTree = "<group>";
+		};
 		FF98EB7D4EE2F77788AEA465 /* Models */ = {
 			isa = PBXGroup;
 			children = (
@@ -271,91 +405,27 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
-		CC07070707070707 /* MCP */ = {
+		'GG10101010101010' = {
 			isa = PBXGroup;
 			children = (
-				CC03030303030303 /* MCPConnection.swift */,
-				CC05050505050505 /* MCPManager.swift */,
-				CC01010101010101 /* MCPServerConfig.swift */,
-				CC04040404040404 /* MCPToolAdapter.swift */,
-				CC02020202020202 /* MCPTypes.swift */,
+				HH04040404040404,
+				HH01010101010101,
+				HH03030303030303,
+				HH02020202020202,
 			);
-			path = MCP;
+			path = Companion;
 			sourceTree = "<group>";
 		};
-		CC10111213141516 /* Agent */ = {
+		'PP10101010101010' = {
 			isa = PBXGroup;
 			children = (
-				BB08091011121314 /* AgentCoordinator.swift */,
-				BB22232425262728 /* AgentExecutor.swift */,
-				BB19202122232425 /* AgentResponse.swift */,
-				BB21222324252627 /* ChatSession.swift */,
-				CC11111111111111 /* ConversationStore.swift */,
-				BB20212223242526 /* IntentClassifier.swift */,
-				CC20212223242526 /* LLM */,
-				CC07070707070707 /* MCP */,
-				EE10101010101010 /* SubAgents */,
-				CC40414243444546 /* Tools */,
-				CC30313233343536 /* Utilities */,
+				QQ05050505050505,
+				QQ04040404040404,
+				QQ02020202020202,
+				QQ01010101010101,
+				QQ03030303030303,
 			);
-			path = Agent;
-			sourceTree = "<group>";
-		};
-		CC40414243444546 /* Tools */ = {
-			isa = PBXGroup;
-			children = (
-				BB09101112131415 /* AgentTool.swift */,
-				BB10111213141516 /* ToolSettings.swift */,
-				BB11121314151617 /* ToolRegistry.swift */,
-				CC50515253545556 /* Builtin */,
-			);
-			path = Tools;
-			sourceTree = "<group>";
-		};
-		CC50515253545556 /* Builtin */ = {
-			isa = PBXGroup;
-			children = (
-				BB12131415161718 /* AppLauncherTool.swift */,
-				BB13141516171819 /* ClipboardTool.swift */,
-				BB16171819202122 /* FileSearchTool.swift */,
-				BB14151617181920 /* ScreenCaptureTool.swift */,
-				BB18192021222324 /* ShellCommandTool.swift */,
-				BB17181920212223 /* SystemSettingsTool.swift */,
-				BB15161718192021 /* UIAutomationTool.swift */,
-			);
-			path = Builtin;
-			sourceTree = "<group>";
-		};
-		CC20212223242526 /* LLM */ = {
-			isa = PBXGroup;
-			children = (
-				BB01020304050607 /* ChatTypes.swift */,
-				BB06070809101112 /* GeminiProvider.swift */,
-				BB07080910111213 /* LLMProviderManager.swift */,
-				BB02030405060708 /* LLMProvider.swift */,
-				BB04050607080910 /* OllamaProvider.swift */,
-				BB05060708091011 /* OpenAIProvider.swift */,
-			);
-			path = LLM;
-			sourceTree = "<group>";
-		};
-		CC30313233343536 /* Utilities */ = {
-			isa = PBXGroup;
-			children = (
-				BB03040506070809 /* KeychainHelper.swift */,
-			);
-			path = Utilities;
-			sourceTree = "<group>";
-		};
-		EE10101010101010 /* SubAgents */ = {
-			isa = PBXGroup;
-			children = (
-				EE04040404040404 /* DelegateToAgentTool.swift */,
-				EE01010101010101 /* SubAgentDefinition.swift */,
-				EE03030303030303 /* SubAgentManager.swift */,
-				EE02020202020202 /* SubAgentRunner.swift */,
-			);
-			path = SubAgents;
+			path = Persona;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -377,7 +447,7 @@
 			packageProductDependencies = (
 				3427E9DA792E8FE869A23A1B /* WhisperKit */,
 				4D5E6F7A8B9C0D1E2F3A4B5C /* FluidAudio */,
-				CC09090909090909 /* MCP */,
+				CC09090909090909,
 			);
 			productName = Voxa;
 			productReference = C19EC1FC8BBC2C5090B92A07 /* Voxa.app */;
@@ -406,7 +476,7 @@
 			packageReferences = (
 				A733BB27433287A629A7FA49 /* XCRemoteSwiftPackageReference "WhisperKit" */,
 				5E6F7A8B9C0D1E2F3A4B5C6D /* XCRemoteSwiftPackageReference "FluidAudio" */,
-				CC08080808080808 /* XCRemoteSwiftPackageReference "swift-sdk" */,
+				CC08080808080808,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1D21D1D46F5ACBE89EA488D3 /* Products */;
@@ -459,43 +529,61 @@
 				20276B62B8418E999BFF83C0 /* TranscriptionEngine.swift in Sources */,
 				CD52015A37EE22353F01EE45 /* TranscriptionHistory.swift in Sources */,
 				7E0313AE3DFD63B8A32DC5FF /* VoxaApp.swift in Sources */,
-				AA01020304050607 /* ChatTypes.swift in Sources */,
-				AA02030405060708 /* LLMProvider.swift in Sources */,
-				AA03040506070809 /* KeychainHelper.swift in Sources */,
-				AA04050607080910 /* OllamaProvider.swift in Sources */,
-				AA05060708091011 /* OpenAIProvider.swift in Sources */,
-				AA06070809101112 /* GeminiProvider.swift in Sources */,
-				AA07080910111213 /* LLMProviderManager.swift in Sources */,
-				AA08091011121314 /* AgentCoordinator.swift in Sources */,
-				AA09101112131415 /* AgentTool.swift in Sources */,
-				AA10111213141516 /* ToolSettings.swift in Sources */,
-				AA11121314151617 /* ToolRegistry.swift in Sources */,
-				AA12131415161718 /* AppLauncherTool.swift in Sources */,
-				AA13141516171819 /* ClipboardTool.swift in Sources */,
-				AA14151617181920 /* ScreenCaptureTool.swift in Sources */,
-				AA15161718192021 /* UIAutomationTool.swift in Sources */,
-				AA16171819202122 /* FileSearchTool.swift in Sources */,
-				AA17181920212223 /* SystemSettingsTool.swift in Sources */,
-				AA18192021222324 /* ShellCommandTool.swift in Sources */,
-				AA19202122232425 /* AgentResponse.swift in Sources */,
-				AA20212223242526 /* IntentClassifier.swift in Sources */,
-				AA21222324252627 /* ChatSession.swift in Sources */,
-				AA22232425262728 /* AgentExecutor.swift in Sources */,
-				AA23242526272829 /* AgentPanel.swift in Sources */,
-				AA24252627282930 /* AgentPanelContent.swift in Sources */,
-				DD01010101010101 /* MCPServerConfig.swift in Sources */,
-				DD02020202020202 /* MCPTypes.swift in Sources */,
-				DD03030303030303 /* MCPConnection.swift in Sources */,
-				DD04040404040404 /* MCPToolAdapter.swift in Sources */,
-				DD05050505050505 /* MCPManager.swift in Sources */,
-				DD06060606060606 /* MCPSettingsView.swift in Sources */,
-				DD08080808080808 /* AgentChatPage.swift in Sources */,
-				DD09090909090909 /* ConversationStore.swift in Sources */,
-				FF01010101010101 /* SubAgentDefinition.swift in Sources */,
-				FF02020202020202 /* SubAgentRunner.swift in Sources */,
-				FF03030303030303 /* SubAgentManager.swift in Sources */,
-				FF04040404040404 /* DelegateToAgentTool.swift in Sources */,
-				FF05050505050505 /* SubAgentSettingsView.swift in Sources */,
+				AA01020304050607,
+				AA02030405060708,
+				AA03040506070809,
+				AA04050607080910,
+				AA05060708091011,
+				AA06070809101112,
+				AA07080910111213,
+				AA08091011121314,
+				AA09101112131415,
+				AA10111213141516,
+				AA11121314151617,
+				AA12131415161718,
+				AA13141516171819,
+				AA14151617181920,
+				AA15161718192021,
+				AA16171819202122,
+				AA17181920212223,
+				AA18192021222324,
+				AA18192021222325,
+				AA18192021222326,
+				AA18192021222327,
+				AA18192021222328,
+				AA19202122232425,
+				AA20212223242526,
+				AA21222324252627,
+				AA22232425262728,
+				AA23242526272829,
+				AA24252627282930,
+				DD01010101010101,
+				DD02020202020202,
+				DD03030303030303,
+				DD04040404040404,
+				DD05050505050505,
+				DD05050505050506,
+				DD06060606060606,
+				DD08080808080808,
+				MM01010101010101,
+				VT01010101010101,
+				DD09090909090909,
+				FF01010101010101,
+				FF02020202020202,
+				FF03030303030303,
+				FF04040404040404,
+				FF05050505050505,
+				GG01010101010101,
+				GG02020202020202,
+				GG03030303030303,
+				GG04040404040404,
+				PP01010101010101,
+				PP02020202020202,
+				PP03030303030303,
+				PP04040404040404,
+				PP05050505050505,
+				F4AD4F39888934581BD80420 /* MessageTrace.swift in Sources */,
+				197046FE96DAA0EC73777141 /* TraceInspectorView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -689,14 +777,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		A733BB27433287A629A7FA49 /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/argmaxinc/WhisperKit";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.9.0;
-			};
-		};
 		5E6F7A8B9C0D1E2F3A4B5C6D /* XCRemoteSwiftPackageReference "FluidAudio" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/FluidInference/FluidAudio";
@@ -705,7 +785,15 @@
 				minimumVersion = 0.12.4;
 			};
 		};
-		CC08080808080808 /* XCRemoteSwiftPackageReference "swift-sdk" */ = {
+		A733BB27433287A629A7FA49 /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/WhisperKit";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.0;
+			};
+		};
+		'CC08080808080808' = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/modelcontextprotocol/swift-sdk";
 			requirement = {
@@ -726,9 +814,9 @@
 			package = 5E6F7A8B9C0D1E2F3A4B5C6D /* XCRemoteSwiftPackageReference "FluidAudio" */;
 			productName = FluidAudio;
 		};
-		CC09090909090909 /* MCP */ = {
+		'CC09090909090909' = {
 			isa = XCSwiftPackageProductDependency;
-			package = CC08080808080808 /* XCRemoteSwiftPackageReference "swift-sdk" */;
+			package = CC08080808080808;
 			productName = MCP;
 		};
 /* End XCSwiftPackageProductDependency section */

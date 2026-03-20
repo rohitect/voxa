@@ -10,6 +10,27 @@ final class MCPManager {
     private(set) var connections: [String: MCPConnection] = [:]
     private weak var toolRegistry: ToolRegistry?
 
+    /// Which MCP server IDs are assigned to the main agent.
+    /// `nil` means "all enabled servers" (backward compatible default).
+    var mainAgentMCPServerIDs: [String]? {
+        get {
+            guard let data = UserDefaults.standard.data(forKey: "agent.main.mcpServers"),
+                  let ids = try? JSONDecoder().decode([String].self, from: data) else {
+                return nil
+            }
+            return ids
+        }
+        set {
+            if let ids = newValue {
+                if let data = try? JSONEncoder().encode(ids) {
+                    UserDefaults.standard.set(data, forKey: "agent.main.mcpServers")
+                }
+            } else {
+                UserDefaults.standard.removeObject(forKey: "agent.main.mcpServers")
+            }
+        }
+    }
+
     init(toolRegistry: ToolRegistry) {
         self.toolRegistry = toolRegistry
         self.configStore = MCPServerConfigStore()
@@ -18,7 +39,12 @@ final class MCPManager {
     // MARK: - Lifecycle
 
     func connectAll() async {
+        let assignedIDs = mainAgentMCPServerIDs
         for config in configStore.servers where config.enabled {
+            // If main agent has specific MCP assignments, only connect those
+            if let assignedIDs, !assignedIDs.contains(config.id) {
+                continue
+            }
             await connectServer(config)
         }
     }
@@ -97,6 +123,103 @@ final class MCPManager {
             guard conn.status.isConnected else { return nil }
             return (serverName: conn.config.name, tools: conn.discoveredTools)
         }
+    }
+
+    // MARK: - Repository Management
+
+    /// Install an MCP server from a git repository.
+    func installFromRepo(repository: String, name: String,
+                         buildCommand: String? = nil,
+                         command: String? = nil, args: [String]? = nil,
+                         transport: MCPTransportType = .stdio, url: String? = nil,
+                         env: [String: String]? = nil) async throws -> MCPInstallResult {
+        let result = try await MCPInstaller.install(
+            repository: repository, name: name,
+            buildCommand: buildCommand,
+            command: command, args: args,
+            transport: transport, url: url,
+            env: env
+        )
+        configStore.add(result.config)
+        if result.config.enabled {
+            await connectServer(result.config)
+        }
+        return result
+    }
+
+    /// Install an MCP server from a local folder (copied, no git, no updates).
+    func installFromLocal(path: String, name: String,
+                          buildCommand: String? = nil,
+                          command: String? = nil, args: [String]? = nil,
+                          transport: MCPTransportType = .stdio, url: String? = nil,
+                          env: [String: String]? = nil) async throws -> MCPInstallResult {
+        let result = try await MCPInstaller.installFromLocal(
+            path: path, name: name,
+            buildCommand: buildCommand,
+            command: command, args: args,
+            transport: transport, url: url,
+            env: env
+        )
+        configStore.add(result.config)
+        if result.config.enabled {
+            await connectServer(result.config)
+        }
+        return result
+    }
+
+    /// Pull latest changes and rebuild a repo-managed MCP server.
+    func updateFromRepo(id: String) async throws -> MCPInstallResult {
+        guard let config = configStore.server(id: id) else {
+            throw MCPInstallerError.repoNotFound
+        }
+
+        // Disconnect while updating
+        if let connection = connections[id] {
+            unregisterTools(for: connection)
+            await connection.disconnect()
+            connections.removeValue(forKey: id)
+        }
+
+        let result = try await MCPInstaller.update(config)
+        configStore.update(result.config)
+
+        // Reconnect
+        if result.config.enabled {
+            await connectServer(result.config)
+        }
+
+        return result
+    }
+
+    /// Re-run the build command for a managed MCP server, then reconnect.
+    func rebuild(id: String) async throws -> String {
+        guard let config = configStore.server(id: id) else {
+            throw MCPInstallerError.repoNotFound
+        }
+
+        // Disconnect while rebuilding
+        if let connection = connections[id] {
+            unregisterTools(for: connection)
+            await connection.disconnect()
+            connections.removeValue(forKey: id)
+        }
+
+        let output = try await MCPInstaller.rebuild(config)
+
+        // Reconnect
+        if config.enabled {
+            await connectServer(config)
+        }
+
+        return output
+    }
+
+    /// Remove a Voxa-managed MCP server, including its cloned/copied files.
+    func removeServerAndRepo(id: String) async {
+        if let config = configStore.server(id: id), config.isVoxaManaged {
+            try? MCPInstaller.uninstall(config)
+        }
+        await removeServer(id: id)
     }
 
     // MARK: - Private

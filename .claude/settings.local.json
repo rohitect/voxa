@@ -58,7 +58,26 @@
       "WebFetch(domain:deepwiki.com)",
       "WebFetch(domain:www.bentoml.com)",
       "WebFetch(domain:www.siliconflow.com)",
-      "Bash(find /Users/rohitranjan/my/projects/voxa -type d -name *.imageset -o -type d -name *.appiconset)"
+      "Bash(find /Users/rohitranjan/my/projects/voxa -type d -name *.imageset -o -type d -name *.appiconset)",
+      "WebFetch(domain:agents.md)",
+      "Bash(xcodebuild -project Voxa.xcodeproj -scheme Voxa -destination 'platform=macOS' build)",
+      "Bash(open:*)",
+      "Bash(log show:*)",
+      "Bash(npm run:*)",
+      "Bash(python3 -m json.tool)",
+      "Bash(timeout 5 node dist/index.js)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(1 sleep:*)",
+      "Bash(python3:*)",
+      "Bash(grep -r \"ChatBubble\\\\|MessageBubble\\\\|BubbleTail\" /Users/rohitranjan/my/projects/voxa --include=*.swift)",
+      "Bash(grep -E \"\\\\.swift$|\\\\.swiftui$\")",
+      "Bash(grep -l \"bubble\\\\|Bubble\\\\|Chat\\\\|Message\" /Users/rohitranjan/my/projects/voxa/Voxa/UI/*.swift /Users/rohitranjan/my/projects/voxa/Voxa/UI/**/*.swift)",
+      "Bash(find /Users/rohitranjan/my/projects/voxa -type d -name *Agent* -o -type d -name *Tool*)",
+      "Bash(xcodebuild -project /Users/rohitranjan/my/projects/voxa/Voxa.xcodeproj -scheme Voxa -destination 'platform=macOS' build)",
+      "Bash(chmod:*)",
+      "Bash(xargs basename:*)",
+      "Bash(pip3 install:*)",
+      "Bash(xcodebuild -scheme Voxa -destination 'platform=macOS' build)"
     ]
   }
 }

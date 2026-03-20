@@ -237,6 +237,67 @@ Voxa is a native macOS menu bar app that captures your voice via a global hotkey
 
 ---
 
+### Phase 7: Agent Module Foundation ✅
+**Goal:** Establish the agent module as an isolated layer with LLM provider abstraction.
+
+- [x] Code separation: all agent logic under `Voxa/Agent/`, minimal additive changes to 5 existing files
+- [x] `ChatTypes.swift` — shared types: `ChatMessage`, `ToolCall`, `ToolDefinition`, `ChatResponse`, `ChatStreamChunk`, `LLMError`
+- [x] `LLMProvider` protocol — `chat()` and `chatStream()` with tool support
+- [x] `OllamaProvider` — local Ollama via `/api/chat` (separate from existing `OllamaClient`)
+- [x] `OpenAIProvider` — OpenAI chat completions API with SSE streaming
+- [x] `GeminiProvider` — Google Gemini generateContent API
+- [x] `LLMProviderManager` — `@Observable` manager for provider/model selection (persisted)
+- [x] `KeychainHelper` — API key storage via Security framework
+- [x] `AgentCoordinator` — bridge between existing pipeline and agent module
+- [x] `.agent` case in `DictationModeType`, agent hotkey (Ctrl+Space) in `HotkeyManager`
+- [x] Agent settings page with provider picker, model config, API key fields
+- [x] Agent hotkey row in MenuBarView and SettingsView
+
+**Deliverable:** Agent foundation with multi-provider LLM support, wired into app via dedicated hotkey.
+
+See `docs/AGENT_MODE_PLAN.md` for full agent roadmap (Phases 7–11).
+
+---
+
+### Phase 8: Tool System + Built-in Tools ✅
+**Goal:** Tool protocol, registry, and 7 built-in macOS tools.
+
+- [x] `AgentTool` protocol with `ToolResult`, `ToolError` types
+- [x] `ToolSettings` — per-tool enable/disable persistence via UserDefaults
+- [x] `ToolRegistry` — register, lookup, execute tools with JSON argument parsing
+- [x] `SystemSettingsTool` — open macOS Settings panes via URL scheme
+- [x] `ClipboardTool` — read/write NSPasteboard
+- [x] `AppLauncherTool` — open/switch/quit apps via NSWorkspace
+- [x] `FileSearchTool` — Spotlight search via NSMetadataQuery (async/await)
+- [x] `ScreenCaptureTool` — CGWindowListCreateImage + Vision OCR
+- [x] `UIAutomationTool` — AXUIElement tree walking, click/type via CGEvent
+- [x] `ShellCommandTool` — /bin/zsh execution with timeout, requires confirmation
+- [x] Tool execution loop in AgentCoordinator (max 5 iterations)
+- [x] Tools section in Agent settings page with per-tool toggles
+
+**Deliverable:** 7 built-in tools with registry, settings, and execution loop.
+
+---
+
+### Phase 9: Agent Core + Agent Mode ✅
+**Goal:** Working voice agent with multi-turn chat, intent classification, and agent panel UI.
+
+- [x] `IntentClassifier` — Tier 1 regex/keyword matching for system control, tool invocation, chat
+- [x] `ChatSession` — multi-turn message history with context trimming (max 40 messages)
+- [x] `AgentExecutor` — core agentic loop: classify intent → execute tools → LLM response
+- [x] `AgentResponse` — typed response (chat, withTools, injection)
+- [x] `AgentPanel` — NSPanel-based floating chat UI (singleton, top-right positioning)
+- [x] `AgentPanelContent` — SwiftUI chat interface with message bubbles, listening/processing states
+- [x] Two panel modes: persistent (stays open) and pop-up (auto-dismisses after 5s)
+- [x] Session management: persists across hotkey presses, voice-triggered reset ("new session", "reset")
+- [x] AgentCoordinator rewritten to use ChatSession + AgentExecutor + AgentPanel
+- [x] Panel mode toggle in Agent settings page
+- [x] System control intents: stop, cancel, reset, new session
+
+**Deliverable:** Full voice agent with multi-turn chat, tool calling, and floating panel UI.
+
+---
+
 ## File Structure
 
 ```
@@ -246,6 +307,34 @@ voxa/
 │   ├── VoxaApp.swift                 # App entry point, MenuBarExtra
 │   ├── Info.plist
 │   ├── Voxa.entitlements
+│   │
+│   ├── Agent/
+│   │   ├── AgentCoordinator.swift    # Bridge between Voxa and agent module
+│   │   ├── AgentExecutor.swift       # Core agentic loop (intent → tools → LLM)
+│   │   ├── AgentResponse.swift       # Typed response (chat/tools/injection)
+│   │   ├── ChatSession.swift         # Multi-turn message history
+│   │   ├── IntentClassifier.swift    # Tier 1 regex + Tier 2 LLM intent classification
+│   │   ├── LLM/
+│   │   │   ├── ChatTypes.swift       # Shared types (ChatMessage, ToolCall, etc.)
+│   │   │   ├── LLMProvider.swift     # Provider protocol
+│   │   │   ├── LLMProviderManager.swift # Provider/model selection manager
+│   │   │   ├── OllamaProvider.swift  # Local Ollama (/api/chat)
+│   │   │   ├── OpenAIProvider.swift  # OpenAI chat completions
+│   │   │   └── GeminiProvider.swift  # Google Gemini
+│   │   ├── Tools/
+│   │   │   ├── AgentTool.swift       # Tool protocol + ToolResult/ToolError
+│   │   │   ├── ToolSettings.swift    # Per-tool enable/disable persistence
+│   │   │   ├── ToolRegistry.swift    # Tool registration and execution
+│   │   │   └── Builtin/
+│   │   │       ├── AppLauncherTool.swift    # Open/switch/quit apps
+│   │   │       ├── ClipboardTool.swift      # Read/write pasteboard
+│   │   │       ├── FileSearchTool.swift     # Spotlight search
+│   │   │       ├── ScreenCaptureTool.swift  # Screen capture + OCR
+│   │   │       ├── ShellCommandTool.swift   # Shell command execution
+│   │   │       ├── SystemSettingsTool.swift # Open Settings panes
+│   │   │       └── UIAutomationTool.swift   # AX tree + click/type
+│   │   └── Utilities/
+│   │       └── KeychainHelper.swift  # API key storage
 │   │
 │   ├── Core/
 │   │   ├── AudioEngine.swift         # Mic capture, PCM buffers
@@ -265,6 +354,8 @@ voxa/
 │   │   └── CommandMode.swift         # Highlight + voice command
 │   │
 │   ├── UI/
+│   │   ├── AgentPanel.swift          # Floating chat panel (NSPanel)
+│   │   ├── AgentPanelContent.swift   # SwiftUI chat UI content
 │   │   ├── MenuBarView.swift         # Menu bar dropdown
 │   │   ├── FloatingIndicator.swift   # Recording/processing overlay
 │   │   ├── SettingsView.swift        # Preferences window
@@ -329,3 +420,5 @@ voxa/
 | **M2: Functional MVP** | 3 + 4 | Hotkey → speak → clean text in any app |
 | **M3: Feature Complete** | 5 | All modes, dictionary, shortcuts |
 | **M4: Release** | 6 | Polished, onboarding, auto-update |
+| **M5: Agent Foundation** | 7 | Multi-provider LLM, agent hotkey |
+| **M6: Agent Tools** | 8 + 9 | 7 built-in tools, multi-turn chat, agent panel |

@@ -9,6 +9,7 @@ final class AgentCoordinator {
     let mcpManager: MCPManager
     let conversationStore: ConversationStore
     let subAgentManager: SubAgentManager
+    let personaManager: PersonaManager
 
     private let audioEngine: AudioEngine
     private let transcriptionEngine: TranscriptionEngine
@@ -32,19 +33,34 @@ final class AgentCoordinator {
         self.transcriptionEngine = transcriptionEngine
         self.providerManager = LLMProviderManager()
         self.toolRegistry = ToolRegistry()
-        self.toolRegistry.registerBuiltinTools()
-        self.subAgentManager = SubAgentManager(parentRegistry: toolRegistry, providerManager: providerManager)
+        self.mcpManager = MCPManager(toolRegistry: toolRegistry)
+        self.subAgentManager = SubAgentManager(configStore: mcpManager.configStore, providerManager: providerManager)
         let delegateTool = DelegateToAgentTool(subAgentManager: subAgentManager)
         self.delegateTool = delegateTool
         self.toolRegistry.register(delegateTool)
-        self.mcpManager = MCPManager(toolRegistry: toolRegistry)
+
+        // Register builtin tools
+        self.toolRegistry.register(ClipboardTool())
+        self.toolRegistry.register(AppLauncherTool())
+        self.toolRegistry.register(FileSearchTool())
+        self.toolRegistry.register(ScreenCaptureTool())
+        self.toolRegistry.register(SystemSettingsTool())
+        self.toolRegistry.register(UIAutomationTool())
+        self.toolRegistry.register(ShellCommandTool())
+        self.toolRegistry.register(AppleScriptTool())
+        self.toolRegistry.register(FileWriteTool())
+        self.toolRegistry.register(FileReadTool())
+        self.toolRegistry.register(ListDirectoryTool())
+
         self.conversationStore = ConversationStore()
-        self.executor = AgentExecutor(providerManager: providerManager, toolRegistry: toolRegistry)
+        self.personaManager = PersonaManager(providerManager: providerManager)
+        self.executor = AgentExecutor(providerManager: providerManager, toolRegistry: toolRegistry, personaManager: personaManager)
 
         // Connect all enabled MCP servers on launch
         Task { await mcpManager.connectAll() }
 
         // Wire up panel UI callbacks
+        AgentPanel.shared.state.toolRegistry = toolRegistry
         AgentPanel.shared.state.requestNewSession = { [weak self] in
             self?.resetSession()
         }
@@ -59,6 +75,7 @@ final class AgentCoordinator {
         conversationStore.newConversation()
         AgentPanel.shared.state.session = session
         AgentPanel.shared.showStatus("New session started. How can I help?")
+        CompanionState.shared.phase = .idle
     }
 
     /// Switch to an existing conversation.
@@ -90,6 +107,7 @@ final class AgentCoordinator {
         print("[AgentCoordinator] Hotkey down — recording")
 
         AgentPanel.shared.showListening()
+        CompanionState.shared.phase = .listening
         audioEngine.startRecording()
     }
 
@@ -104,6 +122,7 @@ final class AgentCoordinator {
         audioEngine.stopRecording()
 
         AgentPanel.shared.showProcessing()
+        CompanionState.shared.phase = .processing
 
         processingTask = Task {
             await processVoiceInput(buffer: buffer, appState: appState)
@@ -123,6 +142,7 @@ final class AgentCoordinator {
         // Update state (shared between floating panel and in-window chat)
         AgentPanel.shared.state.session = session
         AgentPanel.shared.showProcessing()
+        CompanionState.shared.phase = .processing
 
         processingTask = Task {
             await processTextInput(trimmed)
@@ -140,6 +160,7 @@ final class AgentCoordinator {
                     switch action {
                     case .stop, .cancel:
                         AgentPanel.shared.showStatus("Cancelled.")
+                        CompanionState.shared.phase = .idle
                     case .reset, .newSession:
                         resetSession()
                     }
@@ -157,8 +178,16 @@ final class AgentCoordinator {
             )
 
             await MainActor.run {
+                if let trace = response.trace {
+                    self.session.storeTrace(trace)
+                }
                 AgentPanel.shared.finalizeResponse(response, session: self.session)
+                CompanionState.shared.phase = .idle
+                self.conversationStore.saveActive()
             }
+
+            // Learn from the session in the background
+            await personaManager.learnFromSession(session)
 
             print("[AgentCoordinator] Text response: \(response.displayText.prefix(200))")
 
@@ -166,11 +195,17 @@ final class AgentCoordinator {
             print("[AgentCoordinator] Text processing cancelled")
             await MainActor.run {
                 AgentPanel.shared.showStatus("Cancelled.")
+                CompanionState.shared.phase = .idle
             }
         } catch {
             print("[AgentCoordinator] Text error: \(error)")
+            let userMessage = Self.formatErrorForUser(error)
             await MainActor.run {
-                AgentPanel.shared.showStatus("Error: \(error.localizedDescription)")
+                // Add error as an assistant message so it's visible in conversation
+                session.addAssistantMessage(ChatMessage(role: .assistant, content: userMessage))
+                AgentPanel.shared.finalizeResponse(.chat(userMessage), session: self.session)
+                CompanionState.shared.phase = .idle
+                self.conversationStore.saveActive()
             }
         }
     }
@@ -181,6 +216,7 @@ final class AgentCoordinator {
             await MainActor.run {
                 appState.status = .idle
                 AgentPanel.shared.dismiss()
+                CompanionState.shared.phase = .idle
             }
             return
         }
@@ -194,6 +230,7 @@ final class AgentCoordinator {
                 await MainActor.run {
                     appState.status = .idle
                     AgentPanel.shared.dismiss()
+                    CompanionState.shared.phase = .idle
                 }
                 return
             }
@@ -216,8 +253,14 @@ final class AgentCoordinator {
             )
 
             await MainActor.run {
+                // Store trace before finalizing
+                if let trace = response.trace {
+                    self.session.storeTrace(trace)
+                }
                 // Finalize the response in the panel
                 AgentPanel.shared.finalizeResponse(response, session: self.session)
+                CompanionState.shared.phase = .idle
+                self.conversationStore.saveActive()
 
                 // Inject text if needed
                 if let injectText = response.injectText {
@@ -228,6 +271,9 @@ final class AgentCoordinator {
                 appState.status = .idle
             }
 
+            // Learn from the session in the background
+            await personaManager.learnFromSession(session)
+
             print("[AgentCoordinator] Response: \(response.displayText.prefix(200))")
 
         } catch is CancellationError {
@@ -235,12 +281,17 @@ final class AgentCoordinator {
             await MainActor.run {
                 appState.status = .idle
                 AgentPanel.shared.showStatus("Cancelled.")
+                CompanionState.shared.phase = .idle
             }
         } catch {
             print("[AgentCoordinator] Error: \(error)")
+            let userMessage = Self.formatErrorForUser(error)
             await MainActor.run {
                 appState.status = .idle
-                AgentPanel.shared.showStatus("Error: \(error.localizedDescription)")
+                session.addAssistantMessage(ChatMessage(role: .assistant, content: userMessage))
+                AgentPanel.shared.finalizeResponse(.chat(userMessage), session: self.session)
+                CompanionState.shared.phase = .idle
+                self.conversationStore.saveActive()
             }
         }
     }
@@ -252,19 +303,57 @@ final class AgentCoordinator {
             onStreamDelta: { @Sendable delta in
                 await MainActor.run {
                     AgentPanel.shared.appendStreamingText(delta)
+                    CompanionState.shared.phase = .responding
+                    CompanionState.shared.tokenPulseCounter += 1
                 }
             },
             onToolStart: { @Sendable toolName in
                 await MainActor.run {
                     AgentPanel.shared.showToolExecution(toolName)
+                    CompanionState.shared.phase = .toolExecution(toolName)
                 }
             },
             onToolEnd: { @Sendable toolName, isError in
                 await MainActor.run {
                     AgentPanel.shared.clearToolExecution()
+                    CompanionState.shared.phase = .responding
                 }
             }
         )
+    }
+
+    // MARK: - System Control
+
+    // MARK: - Error Formatting
+
+    private static func formatErrorForUser(_ error: Error) -> String {
+        if let llmError = error as? LLMError {
+            switch llmError {
+            case .httpError(let code, let message):
+                let detail = message ?? "No details"
+                switch code {
+                case 400:
+                    return "The LLM rejected the request (HTTP 400). This often happens when too many tools are registered or the conversation is too long. Try starting a new session.\n\nDetails: \(detail)"
+                case 401, 403:
+                    return "Authentication failed (HTTP \(code)). Check your API key in Settings > Agent."
+                case 429:
+                    return "Rate limited (HTTP 429). Wait a moment and try again."
+                case 500...599:
+                    return "The LLM service returned a server error (HTTP \(code)). Try again shortly."
+                default:
+                    return "LLM request failed (HTTP \(code)): \(detail)"
+                }
+            case .timeout:
+                return "The LLM request timed out. The server may be overloaded — try again."
+            case .invalidAPIKey:
+                return "Invalid API key. Check your settings in Settings > Agent."
+            case .providerUnavailable(let name):
+                return "LLM provider '\(name)' is not available. Check that it's running and configured correctly."
+            default:
+                return "LLM error: \(llmError.localizedDescription)"
+            }
+        }
+        return "Error: \(error.localizedDescription)"
     }
 
     // MARK: - System Control
@@ -280,6 +369,7 @@ final class AgentCoordinator {
                 resetSession()
             }
             appState.status = .idle
+            CompanionState.shared.phase = .idle
         }
     }
 }

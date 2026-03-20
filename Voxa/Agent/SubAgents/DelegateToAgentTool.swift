@@ -3,12 +3,11 @@ import Foundation
 /// Built-in tool that allows the main agent to delegate tasks to specialized sub-agents.
 final class DelegateToAgentTool: AgentTool, @unchecked Sendable {
     let name = "delegate_to_agent"
-    let description: String
     let parameters: [ToolParameter] = [
         ToolParameter(
             name: "agent",
             type: "string",
-            description: "The sub-agent ID to delegate to (e.g. 'system', 'research', 'code', 'writer')."
+            description: "The sub-agent ID to delegate to."
         ),
         ToolParameter(
             name: "task",
@@ -22,14 +21,25 @@ final class DelegateToAgentTool: AgentTool, @unchecked Sendable {
     /// Set before each processing cycle so sub-agent activity shows in the UI.
     var activeCallbacks: AgentCallbacks = .none
 
+    /// Dynamic description listing available agents from loaded definitions.
+    var description: String {
+        guard let manager = subAgentManager else {
+            return "Delegate a task to a specialized sub-agent."
+        }
+        let agentList = manager.enabledDefinitions
+            .map { agent -> String in
+                let mcpInfo = agent.mcpServers.isEmpty ? "no MCPs" : "\(agent.mcpServers.count) MCP(s)"
+                return "'\(agent.id)' — \(agent.description) [\(mcpInfo)]"
+            }
+            .joined(separator: "; ")
+        if agentList.isEmpty {
+            return "Delegate a task to a specialized sub-agent. No agents currently enabled."
+        }
+        return "Delegate a task to a specialized sub-agent. Available: \(agentList)"
+    }
+
     init(subAgentManager: SubAgentManager? = nil) {
         self.subAgentManager = subAgentManager
-
-        // Build description listing available agents
-        let agentList = SubAgentDefinition.builtins
-            .map { "'\($0.id)' (\($0.description))" }
-            .joined(separator: ", ")
-        self.description = "Delegate a task to a specialized sub-agent. Available agents: \(agentList). Custom agents may also be available."
     }
 
     func execute(arguments: [String: Any]) async throws -> ToolResult {

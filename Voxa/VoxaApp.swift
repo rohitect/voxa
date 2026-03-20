@@ -173,22 +173,29 @@ struct VoxaApp: App {
 
         Window("Voxa", id: "settings") {
             SettingsView(appState: appState)
+                .background(WindowAccessor())
                 .onAppear {
                     NSApp.activate(ignoringOtherApps: true)
                 }
         }
         .defaultSize(width: 700, height: 480)
+        .windowStyle(.hiddenTitleBar)
 
         Window("Welcome to Voxa", id: "onboarding") {
             OnboardingView(appState: appState) {
                 showOnboarding = false
             }
+            .background(WindowAccessor())
         }
         .defaultSize(width: 440, height: 380)
         .windowResizability(.contentSize)
+        .windowStyle(.hiddenTitleBar)
     }
 
     init() {
+        // Ignore SIGPIPE — prevents crash when a socket/pipe (e.g. Ollama, MCP) closes unexpectedly.
+        signal(SIGPIPE, SIG_IGN)
+
         DispatchQueue.main.async { [self] in
             appState.requestPermissions()
 
@@ -205,6 +212,11 @@ struct VoxaApp: App {
             Task {
                 await appState.loadTranscriptionModel()
                 await appState.refreshOllamaStatus()
+            }
+
+            // Show companion orb if enabled
+            if CompanionState.shared.isVisible {
+                CompanionWindow.shared.show()
             }
 
             // Open the main window on launch

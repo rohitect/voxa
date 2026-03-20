@@ -164,6 +164,10 @@ final class HotkeyManager {
     /// Which mode's hotkey is currently held down (to route keyUp correctly)
     private var activeMode: DictationModeType?
 
+    /// Safety timer: auto-clears activeMode if keyUp is never received (prevents stuck state).
+    private var safetyTimer: Timer?
+    private let safetyTimeout: TimeInterval = 30 // max hold time before auto-release
+
     init() {
         pushToTalkBinding = HotkeyBinding.load(key: "hotkey.pushToTalk", default: .defaultPushToTalk)
         flowBinding = HotkeyBinding.load(key: "hotkey.flow", default: .defaultFlow)
@@ -230,12 +234,31 @@ final class HotkeyManager {
             if let tap = eventTap {
                 CGEvent.tapEnable(tap: tap, enable: true)
             }
+            // Safety: clear activeMode so we never get stuck swallowing keys
+            if let mode = activeMode {
+                deactivateMode()
+                fireUp(for: mode)
+            }
             return event
         }
 
         // Track modifier state
         if type == .flagsChanged {
+            let oldFlags = currentFlags
             currentFlags = event.flags
+
+            // Safety: if the modifier for the active hotkey was released, fire keyUp.
+            // This handles the case where the user releases the modifier key before
+            // the letter key (e.g., lifts Option before Space). Without this, activeMode
+            // stays set and all subsequent events for that key get swallowed.
+            if let mode = activeMode {
+                let binding = bindingForMode(mode)
+                if !binding.matchesModifiers(currentFlags) {
+                    deactivateMode()
+                    fireUp(for: mode)
+                }
+            }
+
             return event
         }
 
@@ -250,27 +273,23 @@ final class HotkeyManager {
             }
 
             // Check each binding (most specific modifiers first to avoid ambiguity)
-            // Agent mode: Ctrl+Space (unique modifier, check first)
             if agentBinding.keyCode == keyCode && agentBinding.matchesModifiers(currentFlags) {
-                activeMode = .agent
+                activateMode(.agent)
                 DispatchQueue.main.async { [weak self] in self?.onAgentDown?() }
                 return nil
             }
-            // Command mode: Option+Shift+Space
             if commandBinding.keyCode == keyCode && commandBinding.matchesModifiers(currentFlags) {
-                activeMode = .command
+                activateMode(.command)
                 DispatchQueue.main.async { [weak self] in self?.onCommandDown?() }
                 return nil
             }
-            // Flow mode: Option+Cmd+Space
             if flowBinding.keyCode == keyCode && flowBinding.matchesModifiers(currentFlags) {
-                activeMode = .flow
+                activateMode(.flow)
                 DispatchQueue.main.async { [weak self] in self?.onFlowDown?() }
                 return nil
             }
-            // Push to talk: Option+Space (least specific, checked last)
             if pushToTalkBinding.keyCode == keyCode && pushToTalkBinding.matchesModifiers(currentFlags) {
-                activeMode = .pushToTalk
+                activateMode(.pushToTalk)
                 DispatchQueue.main.async { [weak self] in self?.onPushToTalkDown?() }
                 return nil
             }
@@ -283,30 +302,55 @@ final class HotkeyManager {
             guard let mode = activeMode else { return event }
 
             // Only handle keyUp for the same key that was pressed
-            let expectedKeyCode: UInt16
-            switch mode {
-            case .pushToTalk: expectedKeyCode = pushToTalkBinding.keyCode
-            case .flow: expectedKeyCode = flowBinding.keyCode
-            case .command: expectedKeyCode = commandBinding.keyCode
-            case .agent: expectedKeyCode = agentBinding.keyCode
-            }
+            let expectedKeyCode = bindingForMode(mode).keyCode
             guard keyCode == expectedKeyCode else { return event }
 
-            activeMode = nil
-            switch mode {
-            case .pushToTalk:
-                DispatchQueue.main.async { [weak self] in self?.onPushToTalkUp?() }
-            case .flow:
-                DispatchQueue.main.async { [weak self] in self?.onFlowUp?() }
-            case .command:
-                DispatchQueue.main.async { [weak self] in self?.onCommandUp?() }
-            case .agent:
-                DispatchQueue.main.async { [weak self] in self?.onAgentUp?() }
-            }
+            deactivateMode()
+            fireUp(for: mode)
             return nil
         }
 
         return event
+    }
+
+    private func activateMode(_ mode: DictationModeType) {
+        activeMode = mode
+        // Safety timer: auto-release if keyUp is never received
+        safetyTimer?.invalidate()
+        safetyTimer = Timer.scheduledTimer(withTimeInterval: safetyTimeout, repeats: false) { [weak self] _ in
+            guard let self, let mode = self.activeMode else { return }
+            print("[HotkeyManager] Safety timeout — force-releasing \(mode)")
+            self.activeMode = nil
+            self.safetyTimer = nil
+            self.fireUp(for: mode)
+        }
+    }
+
+    private func deactivateMode() {
+        activeMode = nil
+        safetyTimer?.invalidate()
+        safetyTimer = nil
+    }
+
+    private func bindingForMode(_ mode: DictationModeType) -> HotkeyBinding {
+        switch mode {
+        case .pushToTalk: return pushToTalkBinding
+        case .flow: return flowBinding
+        case .command: return commandBinding
+        case .agent: return agentBinding
+        }
+    }
+
+    private func fireUp(for mode: DictationModeType) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            switch mode {
+            case .pushToTalk: self.onPushToTalkUp?()
+            case .flow: self.onFlowUp?()
+            case .command: self.onCommandUp?()
+            case .agent: self.onAgentUp?()
+            }
+        }
     }
 }
 

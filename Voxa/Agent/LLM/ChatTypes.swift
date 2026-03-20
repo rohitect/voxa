@@ -16,16 +16,19 @@ struct ChatMessage: Codable, Sendable {
     let content: String?
     let toolCalls: [ToolCall]?
     let toolCallId: String?
+    /// The tool name for tool-result messages (used by Gemini's functionResponse).
+    let toolName: String?
 
-    init(role: ChatRole, content: String?, toolCalls: [ToolCall]? = nil, toolCallId: String? = nil) {
+    init(role: ChatRole, content: String?, toolCalls: [ToolCall]? = nil, toolCallId: String? = nil, toolName: String? = nil) {
         self.role = role
         self.content = content
         self.toolCalls = toolCalls
         self.toolCallId = toolCallId
+        self.toolName = toolName
     }
 
     enum CodingKeys: String, CodingKey {
-        case role, content
+        case role, content, toolName
         case toolCalls = "tool_calls"
         case toolCallId = "tool_call_id"
     }
@@ -37,9 +40,29 @@ struct ToolCall: Codable, Sendable {
     let id: String
     let name: String
     let arguments: String
+    /// Provider-specific opaque data (e.g. Gemini's full functionCall dict with thought_signature).
+    /// Stored as JSON data for Codable support.
+    var providerRawCallData: Data?
+
+    /// Convenience accessor for the raw call dict.
+    var providerRawCall: [String: Any]? {
+        get {
+            guard let data = providerRawCallData else { return nil }
+            return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        }
+    }
+
+    init(id: String, name: String, arguments: String, providerRawCall: [String: Any]? = nil) {
+        self.id = id
+        self.name = name
+        self.arguments = arguments
+        if let raw = providerRawCall {
+            self.providerRawCallData = try? JSONSerialization.data(withJSONObject: raw)
+        }
+    }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, arguments
+        case id, name, arguments, providerRawCallData
     }
 }
 

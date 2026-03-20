@@ -8,7 +8,6 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     case chat = "Chat"
     case dictionary = "Dictionary"
     case snippets = "Snippets"
-    case models = "Models"
     case agent = "Agent"
     case settings = "Settings"
 
@@ -20,7 +19,6 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .chat: return "bubble.left.and.bubble.right"
         case .dictionary: return "character.book.closed"
         case .snippets: return "text.quote"
-        case .models: return "cpu"
         case .agent: return "brain.head.profile"
         case .settings: return "gear"
         }
@@ -99,7 +97,7 @@ struct SettingsView: View {
             .padding(.bottom, 16)
         }
         .frame(minWidth: 180, maxWidth: 180)
-        .background(.background)
+        .background(Color.primary.opacity(0.04))
     }
 
     // MARK: - Detail
@@ -115,8 +113,6 @@ struct SettingsView: View {
             DictionaryPage()
         case .snippets:
             SnippetsPage()
-        case .models:
-            ModelsPage(appState: appState)
         case .agent:
             AgentSettingsPage(appState: appState)
         case .settings:
@@ -133,6 +129,8 @@ private struct SidebarItem: View {
     let isSelected: Bool
     let action: () -> Void
 
+    @State private var isHovered = false
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
@@ -147,12 +145,16 @@ private struct SidebarItem: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
+            .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)
+                    .fill(isSelected
+                          ? VoxaTheme.surfaceOverlayActive
+                          : isHovered ? VoxaTheme.surfaceOverlay : Color.clear)
             )
         }
         .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
     }
 }
 
@@ -256,7 +258,7 @@ private struct HomePage: View {
                                     }
                                     .padding(.vertical, 10)
                                     .padding(.horizontal, 12)
-                                    .background(Color(.controlBackgroundColor))
+                                    .background(Color.primary.opacity(0.06))
                                 }
                             }
                             .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -336,8 +338,11 @@ private struct StatusCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(Color(.controlBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
+        )
     }
 }
 
@@ -422,7 +427,7 @@ private struct DictionaryPage: View {
                             }
                             .padding(.horizontal, 24)
                             .padding(.vertical, 10)
-                            .background(Color(.controlBackgroundColor))
+                            .background(Color.primary.opacity(0.06))
                         }
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -515,162 +520,16 @@ private struct SnippetsPage: View {
                                 .buttonStyle(.plain)
                             }
                             .padding(14)
-                            .background(Color(.controlBackgroundColor))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
+                            )
                         }
                     }
                     .padding(24)
                 }
             }
-        }
-    }
-}
-
-// MARK: - Models Page
-
-private struct ModelsPage: View {
-    let appState: AppState
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // Header
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Models")
-                        .font(.title)
-                        .fontWeight(.bold)
-                    Text("Manage speech-to-text and LLM models.")
-                        .foregroundStyle(.secondary)
-                        .font(.subheadline)
-                }
-
-                // STT Provider Picker
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Speech Engine")
-                        .font(.headline)
-
-                    VStack(spacing: 1) {
-                        ForEach(STTProvider.allCases) { provider in
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(provider.rawValue)
-                                        .font(.system(size: 13, weight: .medium))
-                                    Text(provider.description)
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                Spacer()
-
-                                if provider == appState.transcriptionEngine.provider {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(Color.accentColor)
-                                } else {
-                                    Button("Switch") {
-                                        appState.switchProvider(to: provider)
-                                    }
-                                    .font(.caption)
-                                    .buttonStyle(.bordered)
-                                    .controlSize(.small)
-                                }
-                            }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 10)
-                            .background(Color(.controlBackgroundColor))
-                        }
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-
-                // STT Model
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Speech-to-Text Model")
-                        .font(.headline)
-
-                    let models = ModelManager.availableModels(for: appState.modelManager.provider)
-                    VStack(spacing: 1) {
-                        ForEach(models, id: \.self) { model in
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(model)
-                                        .font(.system(size: 13, weight: .medium))
-                                    if appState.modelManager.availableLocalModels.contains(model) {
-                                        Text("Downloaded")
-                                            .font(.caption2)
-                                            .foregroundStyle(.green)
-                                    }
-                                }
-
-                                Spacer()
-
-                                if model == appState.modelManager.selectedModel {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(Color.accentColor)
-                                } else {
-                                    Button("Select") {
-                                        appState.modelManager.selectModel(model)
-                                    }
-                                    .font(.caption)
-                                    .buttonStyle(.bordered)
-                                    .controlSize(.small)
-                                }
-                            }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 10)
-                            .background(Color(.controlBackgroundColor))
-                        }
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                    ModelDownloadView(modelManager: appState.modelManager)
-                }
-
-                // LLM Model
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("LLM Text Cleanup")
-                        .font(.headline)
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(Constants.ollamaDefaultModel)
-                                    .font(.system(size: 13, weight: .medium))
-                                Text("via Ollama")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(appState.textCleanupEngine.ollamaAvailable && appState.textCleanupEngine.modelReady ? .green : .red)
-                                    .frame(width: 6, height: 6)
-                                Text(appState.textCleanupEngine.ollamaAvailable && appState.textCleanupEngine.modelReady ? "Ready" : "Not available")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        if appState.textCleanupEngine.ollamaAvailable && !appState.textCleanupEngine.modelReady {
-                            Button("Download Model") {
-                                Task { await appState.textCleanupEngine.downloadModel() }
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                        }
-
-                        Button("Refresh Ollama Status") {
-                            Task { await appState.refreshOllamaStatus() }
-                        }
-                        .font(.caption)
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.secondary)
-                    }
-                    .padding(14)
-                    .background(Color(.controlBackgroundColor))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-            }
-            .padding(24)
         }
     }
 }
@@ -681,6 +540,7 @@ private struct AgentSettingsPage: View {
     let appState: AppState
     @State private var openAIKey: String = KeychainHelper.load(key: OpenAIProvider.apiKeyKeychainKey) ?? ""
     @State private var geminiKey: String = KeychainHelper.load(key: GeminiProvider.apiKeyKeychainKey) ?? ""
+    @State private var showMainAgentMCPSheet = false
 
     var body: some View {
         ScrollView {
@@ -807,9 +667,50 @@ private struct AgentSettingsPage: View {
                     }
                 }
 
+                // Main Agent
+                SettingsSection(title: "Main Agent") {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Voxa")
+                                .font(.system(size: 13, weight: .medium))
+                            Text("The primary agent that handles all voice commands and chat.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+
+                        Spacer()
+
+                        // MCP server count badge
+                        let mcpCount = appState.agentCoordinator.mcpManager.mainAgentMCPServerIDs?.count
+                            ?? appState.agentCoordinator.mcpManager.configStore.servers.filter(\.enabled).count
+                        if mcpCount > 0 {
+                            Text("\(mcpCount) MCP\(mcpCount == 1 ? "" : "s")")
+                                .font(.system(size: 10))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.secondary.opacity(0.12))
+                                .clipShape(Capsule())
+                        }
+
+                        Button("MCPs") {
+                            showMainAgentMCPSheet = true
+                        }
+                        .font(.system(size: 11))
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color.primary.opacity(0.06))
+                }
+                .sheet(isPresented: $showMainAgentMCPSheet) {
+                    MainAgentMCPSheet(mcpManager: appState.agentCoordinator.mcpManager)
+                }
+
                 // Sub-Agents
                 SettingsSection(title: "Sub-Agents") {
-                    SubAgentSettingsView(subAgentManager: appState.agentCoordinator.subAgentManager)
+                    SubAgentSettingsView(subAgentManager: appState.agentCoordinator.subAgentManager, mcpConfigStore: appState.agentCoordinator.mcpManager.configStore)
                 }
             }
             .padding(24)
@@ -823,24 +724,105 @@ private struct AgentSettingsPage: View {
 
 // MARK: - Settings Page
 
+// MARK: - Settings Tab Enum
+
+private enum SettingsTab: String, CaseIterable, Identifiable {
+    case general = "General"
+    case models = "Models"
+    case hotkeys = "Hotkeys"
+    case audio = "Audio"
+    case permissions = "Permissions"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .general: return "gearshape"
+        case .models: return "cpu"
+        case .hotkeys: return "keyboard"
+        case .audio: return "mic"
+        case .permissions: return "lock.shield"
+        }
+    }
+}
+
 private struct SettingsPage_: View {
+    let appState: AppState
+    @State private var selectedTab: SettingsTab = .general
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Settings")
+                    .font(.title)
+                    .fontWeight(.bold)
+                Text("Configure Voxa to work the way you want.")
+                    .foregroundStyle(.secondary)
+                    .font(.subheadline)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 24)
+            .padding(.top, 24)
+            .padding(.bottom, 16)
+
+            // Tab bar
+            HStack(spacing: 0) {
+                ForEach(SettingsTab.allCases) { tab in
+                    Button {
+                        selectedTab = tab
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: tab.icon)
+                                .font(.system(size: 12))
+                            Text(tab.rawValue)
+                                .font(.system(size: 13, weight: selectedTab == tab ? .semibold : .regular))
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(selectedTab == tab ? Color.accentColor.opacity(0.12) : Color.clear)
+                        )
+                        .foregroundStyle(selectedTab == tab ? .primary : .secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+
+            Divider()
+                .padding(.top, 8)
+
+            // Tab content
+            Group {
+                switch selectedTab {
+                case .general:
+                    SettingsGeneralTab(appState: appState)
+                case .models:
+                    SettingsModelsTab(appState: appState)
+                case .hotkeys:
+                    SettingsHotkeysTab(appState: appState)
+                case .audio:
+                    SettingsAudioTab(appState: appState)
+                case .permissions:
+                    SettingsPermissionsTab(appState: appState)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - General Tab
+
+private struct SettingsGeneralTab: View {
     let appState: AppState
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                // Header
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Settings")
-                        .font(.title)
-                        .fontWeight(.bold)
-                    Text("Configure Voxa to work the way you want.")
-                        .foregroundStyle(.secondary)
-                        .font(.subheadline)
-                }
-
-                // General
                 SettingsSection(title: "General") {
                     SettingsRow(label: "Launch at Login") {
                         Toggle("", isOn: $launchAtLogin)
@@ -871,41 +853,20 @@ private struct SettingsPage_: View {
                             .labelsHidden()
                             .disabled(!appState.textCleanupEngine.ollamaAvailable)
                     }
-                }
 
-                // Hotkeys
-                SettingsSection(title: "Hotkeys") {
-                    SettingsRow(label: "Push to Talk") {
-                        HotkeyLabel(binding: appState.hotkeyManager.pushToTalkBinding)
-                    }
-                    SettingsRow(label: "Flow Mode") {
-                        HotkeyLabel(binding: appState.hotkeyManager.flowBinding)
-                    }
-                    SettingsRow(label: "Command Mode") {
-                        HotkeyLabel(binding: appState.hotkeyManager.commandBinding)
-                    }
-                    SettingsRow(label: "Agent Mode") {
-                        HotkeyLabel(binding: appState.hotkeyManager.agentBinding)
-                    }
-                }
-
-                // Audio
-                SettingsSection(title: "Audio") {
-                    SettingsRow(label: "Microphone") {
-                        Picker("", selection: Binding(
-                            get: { appState.audioEngine.selectedDeviceID ?? 0 },
-                            set: { appState.audioEngine.selectDevice($0) }
-                        )) {
-                            ForEach(appState.audioEngine.availableInputDevices) { device in
-                                Text(device.name).tag(device.id)
+                    SettingsRow(label: "Show Companion") {
+                        Toggle("", isOn: Binding(
+                            get: { CompanionState.shared.isVisible },
+                            set: { newValue in
+                                CompanionState.shared.isVisible = newValue
+                                if newValue { CompanionWindow.shared.show() }
+                                else { CompanionWindow.shared.hide() }
                             }
-                        }
+                        ))
                         .labelsHidden()
-                        .frame(width: 200)
                     }
                 }
 
-                // About
                 SettingsSection(title: "About") {
                     SettingsRow(label: "Version") {
                         Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0")
@@ -922,6 +883,480 @@ private struct SettingsPage_: View {
             }
             .padding(24)
         }
+    }
+}
+
+// MARK: - Models Tab
+
+private struct SettingsModelsTab: View {
+    let appState: AppState
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                // STT Provider Picker
+                SettingsSection(title: "Speech Engine") {
+                    ForEach(STTProvider.allCases) { provider in
+                        SettingsRow(label: provider.rawValue) {
+                            HStack(spacing: 8) {
+                                Text(provider.description)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+
+                                if provider == appState.transcriptionEngine.provider {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(Color.accentColor)
+                                } else {
+                                    Button("Switch") {
+                                        appState.switchProvider(to: provider)
+                                    }
+                                    .font(.caption)
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // STT Model
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("SPEECH-TO-TEXT MODEL")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.tertiary)
+                        .padding(.bottom, 6)
+
+                    let models = ModelManager.availableModels(for: appState.modelManager.provider)
+                    VStack(spacing: 1) {
+                        ForEach(models, id: \.self) { model in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(model)
+                                        .font(.system(size: 13, weight: .medium))
+                                    if appState.modelManager.availableLocalModels.contains(model) {
+                                        Text("Downloaded")
+                                            .font(.caption2)
+                                            .foregroundStyle(.green)
+                                    }
+                                }
+
+                                Spacer()
+
+                                if model == appState.modelManager.selectedModel {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(Color.accentColor)
+                                } else {
+                                    Button("Select") {
+                                        appState.modelManager.selectModel(model)
+                                    }
+                                    .font(.caption)
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(Color.primary.opacity(0.06))
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                    ModelDownloadView(modelManager: appState.modelManager)
+                }
+
+                // LLM Model
+                SettingsSection(title: "LLM Text Cleanup") {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(Constants.ollamaDefaultModel)
+                                .font(.system(size: 13, weight: .medium))
+                            Text("via Ollama")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(appState.textCleanupEngine.ollamaAvailable && appState.textCleanupEngine.modelReady ? .green : .red)
+                                .frame(width: 6, height: 6)
+                            Text(appState.textCleanupEngine.ollamaAvailable && appState.textCleanupEngine.modelReady ? "Ready" : "Not available")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color.primary.opacity(0.06))
+
+                    if appState.textCleanupEngine.ollamaAvailable && !appState.textCleanupEngine.modelReady {
+                        Button("Download Model") {
+                            Task { await appState.textCleanupEngine.downloadModel() }
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Color.primary.opacity(0.06))
+                    }
+
+                    HStack {
+                        Spacer()
+                        Button("Refresh Ollama Status") {
+                            Task { await appState.refreshOllamaStatus() }
+                        }
+                        .font(.caption)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Color.primary.opacity(0.06))
+                }
+            }
+            .padding(24)
+        }
+    }
+}
+
+// MARK: - Hotkeys Tab
+
+private struct SettingsHotkeysTab: View {
+    let appState: AppState
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                SettingsSection(title: "Hotkeys") {
+                    SettingsRow(label: "Push to Talk") {
+                        HotkeyLabel(binding: appState.hotkeyManager.pushToTalkBinding)
+                    }
+                    SettingsRow(label: "Flow Mode") {
+                        HotkeyLabel(binding: appState.hotkeyManager.flowBinding)
+                    }
+                    SettingsRow(label: "Command Mode") {
+                        HotkeyLabel(binding: appState.hotkeyManager.commandBinding)
+                    }
+                    SettingsRow(label: "Agent Mode") {
+                        HotkeyLabel(binding: appState.hotkeyManager.agentBinding)
+                    }
+                }
+            }
+            .padding(24)
+        }
+    }
+}
+
+// MARK: - Audio Tab
+
+private struct SettingsAudioTab: View {
+    let appState: AppState
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                SettingsSection(title: "Audio Input") {
+                    SettingsRow(label: "Microphone") {
+                        Picker("", selection: Binding(
+                            get: { appState.audioEngine.selectedDeviceID ?? 0 },
+                            set: { appState.audioEngine.selectDevice($0) }
+                        )) {
+                            ForEach(appState.audioEngine.availableInputDevices) { device in
+                                Text(device.name).tag(device.id)
+                            }
+                        }
+                        .labelsHidden()
+                        .frame(width: 200)
+                    }
+                }
+            }
+            .padding(24)
+        }
+    }
+}
+
+// MARK: - Permissions Tab
+
+private struct SettingsPermissionsTab: View {
+    let appState: AppState
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                PermissionsSection(permissionManager: appState.permissionManager)
+            }
+            .padding(24)
+        }
+    }
+}
+
+// MARK: - Permissions Section
+
+import ScreenCaptureKit
+
+private struct PermissionsSection: View {
+    let permissionManager: PermissionManager
+    @State private var screenRecordingGranted = false
+
+    var body: some View {
+        SettingsSection(title: "Permissions") {
+            // Microphone
+            SettingsRow(label: "Microphone") {
+                HStack(spacing: 8) {
+                    statusBadge(granted: permissionManager.microphoneGranted)
+                    if !permissionManager.microphoneGranted {
+                        Button("Grant") {
+                            permissionManager.requestMicrophone()
+                        }
+                        .font(.caption)
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+
+                        Button("Open Settings") {
+                            openSystemSettings("com.apple.preference.security?Privacy_Microphone")
+                        }
+                        .font(.caption)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            // Accessibility
+            SettingsRow(label: "Accessibility") {
+                HStack(spacing: 8) {
+                    statusBadge(granted: permissionManager.accessibilityGranted)
+                    if !permissionManager.accessibilityGranted {
+                        Button("Grant") {
+                            permissionManager.promptAccessibility()
+                        }
+                        .font(.caption)
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+
+                        Button("Open Settings") {
+                            openSystemSettings("com.apple.preference.security?Privacy_Accessibility")
+                        }
+                        .font(.caption)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            // Screen Recording (needed for ScreenCaptureTool)
+            VStack(alignment: .leading, spacing: 6) {
+                SettingsRow(label: "Screen Recording") {
+                    HStack(spacing: 8) {
+                        statusBadge(granted: screenRecordingGranted)
+                        if !screenRecordingGranted {
+                            Button("Open Settings") {
+                                openScreenRecordingSettings()
+                            }
+                            .font(.caption)
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+                    }
+                }
+                if !screenRecordingGranted {
+                    Text("Click \"+\" in System Settings to add Voxa manually, then enable the toggle.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, 6)
+                        .background(Color.primary.opacity(0.06))
+                }
+            }
+            .background(Color.primary.opacity(0.06))
+
+            // Check All
+            HStack {
+                Spacer()
+                Button("Check All") {
+                    permissionManager.requestMicrophone()
+                    permissionManager.checkAccessibility()
+                    checkScreenRecording()
+                }
+                .font(.caption)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Color.primary.opacity(0.06))
+        }
+        .onAppear {
+            checkScreenRecording()
+        }
+    }
+
+    private func statusBadge(granted: Bool) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: granted ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .foregroundStyle(granted ? .green : .red)
+                .font(.system(size: 14))
+            Text(granted ? "Granted" : "Not Granted")
+                .font(.caption)
+                .foregroundStyle(granted ? .green : .red)
+        }
+    }
+
+    private func checkScreenRecording() {
+        // Use ScreenCaptureKit to register in macOS 15+ "Screen and System Audio Recording" pane
+        Task {
+            do {
+                _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+                await MainActor.run { screenRecordingGranted = true }
+            } catch {
+                await MainActor.run { screenRecordingGranted = false }
+            }
+        }
+    }
+
+    private func openSystemSettings(_ pane: String) {
+        if let url = URL(string: "x-apple.systempreferences:\(pane)") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    private func openScreenRecordingSettings() {
+        // macOS 15+ uses a new pane for Screen & System Audio Recording
+        let urls = [
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture",
+            "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_ScreenCapture"
+        ]
+        for urlString in urls {
+            if let url = URL(string: urlString) {
+                NSWorkspace.shared.open(url)
+                return
+            }
+        }
+    }
+}
+
+// MARK: - Main Agent MCP Sheet
+
+private struct MainAgentMCPSheet: View {
+    let mcpManager: MCPManager
+    @State private var selectedIDs: Set<String> = []
+    @State private var useAll = true
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Main Agent — MCP Servers")
+                    .font(.headline)
+                Spacer()
+            }
+            .padding()
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle("Use all enabled MCP servers", isOn: $useAll)
+                        .font(.system(size: 13))
+
+                    if useAll {
+                        Text("The main agent will automatically use every enabled MCP server.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Select which MCP servers the main agent can use:")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+
+                        if mcpManager.configStore.servers.isEmpty {
+                            Text("No MCP servers configured. Add servers in the MCP settings section.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                                .padding(.vertical, 4)
+                        } else {
+                            VStack(alignment: .leading, spacing: 4) {
+                                ForEach(mcpManager.configStore.servers) { server in
+                                    HStack(spacing: 8) {
+                                        Toggle("", isOn: Binding(
+                                            get: { selectedIDs.contains(server.id) },
+                                            set: { isOn in
+                                                if isOn {
+                                                    selectedIDs.insert(server.id)
+                                                } else {
+                                                    selectedIDs.remove(server.id)
+                                                }
+                                            }
+                                        ))
+                                        .toggleStyle(.checkbox)
+                                        .controlSize(.small)
+
+                                        Text(server.name)
+                                            .font(.system(size: 12))
+
+                                        Text(server.transport.rawValue.uppercased())
+                                            .font(.system(size: 9, weight: .semibold))
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 1)
+                                            .background(Color.secondary.opacity(0.12))
+                                            .clipShape(Capsule())
+
+                                        if !server.enabled {
+                                            Text("DISABLED")
+                                                .font(.system(size: 9, weight: .semibold))
+                                                .foregroundStyle(.orange)
+                                                .padding(.horizontal, 4)
+                                                .padding(.vertical, 1)
+                                                .background(Color.orange.opacity(0.12))
+                                                .clipShape(Capsule())
+                                        }
+
+                                        Spacer()
+                                    }
+                                }
+                            }
+                            .padding(8)
+                            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
+                        }
+                    }
+                }
+                .padding()
+            }
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Button("Save") {
+                    if useAll {
+                        mcpManager.mainAgentMCPServerIDs = nil
+                    } else {
+                        mcpManager.mainAgentMCPServerIDs = Array(selectedIDs)
+                    }
+                    // Reconnect with new assignments
+                    Task { await reconnectMainAgent() }
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding()
+        }
+        .frame(width: 420, height: 400)
+        .onAppear {
+            if let ids = mcpManager.mainAgentMCPServerIDs {
+                useAll = false
+                selectedIDs = Set(ids)
+            } else {
+                useAll = true
+                selectedIDs = Set(mcpManager.configStore.servers.filter(\.enabled).map(\.id))
+            }
+        }
+    }
+
+    private func reconnectMainAgent() async {
+        await mcpManager.disconnectAll()
+        await mcpManager.connectAll()
     }
 }
 
@@ -960,7 +1395,7 @@ struct SettingsRow<Content: View>: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(Color(.controlBackgroundColor))
+        .background(Color.primary.opacity(0.06))
     }
 }
 
@@ -974,7 +1409,7 @@ private struct HotkeyLabel: View {
             .font(.system(size: 12, design: .monospaced))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(Color(.controlBackgroundColor).opacity(0.5))
+            .background(Color.primary.opacity(0.08))
             .overlay(
                 RoundedRectangle(cornerRadius: 4)
                     .stroke(Color.secondary.opacity(0.3), lineWidth: 1)

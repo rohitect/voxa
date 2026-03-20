@@ -59,7 +59,18 @@ struct GeminiProvider: LLMProvider {
                     let request = try buildRequest(model: model, messages: messages, tools: tools, stream: true, timeout: timeout)
 
                     let (bytes, response) = try await URLSession.shared.bytes(for: request)
-                    try validateHTTPResponse(response, data: nil)
+                    if let http = response as? HTTPURLResponse, !(200..<300 ~= http.statusCode) {
+                        // Read error body from stream
+                        var errorBody = ""
+                        for try await line in bytes.lines { errorBody += line }
+                        var message: String?
+                        if let data = errorBody.data(using: .utf8),
+                           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                           let error = json["error"] as? [String: Any] {
+                            message = error["message"] as? String
+                        }
+                        throw LLMError.httpError(statusCode: http.statusCode, message: message ?? String(errorBody.prefix(500)))
+                    }
 
                     // Gemini streams as JSON array entries, each line prefixed with data:
                     for try await line in bytes.lines {
@@ -86,7 +97,8 @@ struct GeminiProvider: LLMProvider {
                                 let args = fc["args"] as? [String: Any] ?? [:]
                                 let argsStr = (try? JSONSerialization.data(withJSONObject: args))
                                     .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
-                                let call = ToolCall(id: UUID().uuidString, name: name, arguments: argsStr)
+                                // Store the full part dict (includes thought_signature alongside functionCall)
+                                let call = ToolCall(id: UUID().uuidString, name: name, arguments: argsStr, providerRawCall: part)
                                 if deltaToolCalls == nil { deltaToolCalls = [] }
                                 deltaToolCalls?.append(call)
                             }
@@ -144,7 +156,7 @@ struct GeminiProvider: LLMProvider {
                         [
                             "name": tool.name,
                             "description": tool.description,
-                            "parameters": tool.parameters,
+                            "parameters": sanitizeSchemaForGemini(tool.parameters),
                         ] as [String: Any]
                     }
                 ]
@@ -170,10 +182,12 @@ struct GeminiProvider: LLMProvider {
             var parts: [[String: Any]] = []
 
             if let content = msg.content {
-                if msg.role == .tool, let toolCallId = msg.toolCallId {
+                if msg.role == .tool {
+                    // Use toolName (actual function name) for Gemini's functionResponse
+                    let name = msg.toolName ?? msg.toolCallId ?? "unknown"
                     parts.append([
                         "functionResponse": [
-                            "name": toolCallId,
+                            "name": name,
                             "response": ["result": content],
                         ]
                     ])
@@ -184,15 +198,23 @@ struct GeminiProvider: LLMProvider {
 
             if let toolCalls = msg.toolCalls {
                 for tc in toolCalls {
-                    let args = (try? JSONSerialization.jsonObject(
-                        with: Data(tc.arguments.utf8)
-                    )) as? [String: Any] ?? [:]
-                    parts.append([
-                        "functionCall": [
-                            "name": tc.name,
-                            "args": args,
-                        ]
-                    ])
+                    if let rawPart = tc.providerRawCall {
+                        if rawPart["functionCall"] != nil {
+                            // Full part dict (functionCall + thought_signature) — pass through as-is
+                            parts.append(rawPart)
+                        } else {
+                            // Old format: raw dict is the functionCall itself, wrap it
+                            parts.append(["functionCall": rawPart])
+                        }
+                    } else {
+                        // No raw data (e.g. Ollama-originated) — reconstruct
+                        let args = (try? JSONSerialization.jsonObject(
+                            with: Data(tc.arguments.utf8)
+                        )) as? [String: Any] ?? [:]
+                        parts.append([
+                            "functionCall": ["name": tc.name, "args": args]
+                        ])
+                    }
                 }
             }
 
@@ -216,7 +238,8 @@ struct GeminiProvider: LLMProvider {
                 let args = fc["args"] as? [String: Any] ?? [:]
                 let argsStr = (try? JSONSerialization.data(withJSONObject: args))
                     .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
-                toolCalls.append(ToolCall(id: UUID().uuidString, name: name, arguments: argsStr))
+                // Store the full part dict (includes thought_signature alongside functionCall)
+                toolCalls.append(ToolCall(id: UUID().uuidString, name: name, arguments: argsStr, providerRawCall: part))
             }
         }
 
@@ -242,6 +265,49 @@ struct GeminiProvider: LLMProvider {
               let completion = dict["candidatesTokenCount"] as? Int,
               let total = dict["totalTokenCount"] as? Int else { return nil }
         return TokenUsage(promptTokens: prompt, completionTokens: completion, totalTokens: total)
+    }
+
+    // MARK: - Gemini Schema Sanitization
+
+    /// Gemini's function calling has strict schema requirements.
+    /// Strip unsupported fields and fix common incompatibilities.
+    private func sanitizeSchemaForGemini(_ schema: [String: Any]) -> [String: Any] {
+        var result: [String: Any] = [:]
+
+        for (key, value) in schema {
+            // Skip fields Gemini doesn't support
+            if ["$schema", "additionalProperties", "default", "examples", "title"].contains(key) {
+                continue
+            }
+
+            if key == "properties", let props = value as? [String: Any] {
+                var sanitizedProps: [String: Any] = [:]
+                for (propName, propValue) in props {
+                    if let propDict = propValue as? [String: Any] {
+                        sanitizedProps[propName] = sanitizeSchemaForGemini(propDict)
+                    } else {
+                        sanitizedProps[propName] = propValue
+                    }
+                }
+                result[key] = sanitizedProps
+            } else if key == "items", let items = value as? [String: Any] {
+                result[key] = sanitizeSchemaForGemini(items)
+            } else {
+                result[key] = value
+            }
+        }
+
+        // Gemini requires "type" on every schema object that has "properties"
+        if result["properties"] != nil && result["type"] == nil {
+            result["type"] = "object"
+        }
+
+        // Gemini requires "items" on array types
+        if let type = result["type"] as? String, type == "array", result["items"] == nil {
+            result["items"] = ["type": "string"]
+        }
+
+        return result
     }
 
     private func validateHTTPResponse(_ response: URLResponse, data: Data?) throws {

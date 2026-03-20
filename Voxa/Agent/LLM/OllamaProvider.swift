@@ -201,12 +201,16 @@ struct OllamaProvider: LLMProvider {
         }
     }
 
-    private func validateHTTPResponse(_ response: URLResponse) throws {
+    private func validateHTTPResponse(_ response: URLResponse, data: Data? = nil) throws {
         guard let http = response as? HTTPURLResponse else {
             throw LLMError.invalidResponse
         }
         guard 200..<300 ~= http.statusCode else {
-            throw LLMError.httpError(statusCode: http.statusCode, message: nil)
+            var message: String?
+            if let data, let body = String(data: data, encoding: .utf8), !body.isEmpty {
+                message = String(body.prefix(500))
+            }
+            throw LLMError.httpError(statusCode: http.statusCode, message: message)
         }
     }
 }

@@ -1,9 +1,25 @@
 import Foundation
 
+// MARK: - Tool Confirmation
+
+/// A pending tool confirmation request that the UI can observe and respond to.
+struct ToolConfirmationRequest: Identifiable {
+    let id = UUID()
+    let toolName: String
+    let arguments: String
+    let timestamp = Date()
+}
+
 @Observable
 final class ToolRegistry {
     private(set) var tools: [String: any AgentTool] = [:]
     let settings = ToolSettings()
+
+    /// The currently pending confirmation request, if any. Observed by the UI.
+    var pendingConfirmation: ToolConfirmationRequest?
+
+    /// Continuation to resume after user responds to confirmation.
+    private var confirmationContinuation: CheckedContinuation<Bool, Never>?
 
     func register(_ tool: any AgentTool) {
         tools[tool.name] = tool
@@ -32,8 +48,12 @@ final class ToolRegistry {
             return .error("Tool '\(tool.name)' is disabled")
         }
 
+        // If tool requires confirmation, suspend and wait for user response
         if tool.requiresConfirmation {
-            return .error("Tool '\(tool.name)' requires user confirmation (not yet available)")
+            let approved = await requestConfirmation(toolName: tool.name, arguments: toolCall.arguments)
+            guard approved else {
+                return .error("User denied execution of '\(tool.name)'")
+            }
         }
 
         // Parse JSON arguments
@@ -57,6 +77,42 @@ final class ToolRegistry {
         }
     }
 
+    // MARK: - Confirmation Flow
+
+    /// Suspend execution and wait for user to approve or deny.
+    private func requestConfirmation(toolName: String, arguments: String) async -> Bool {
+        let request = ToolConfirmationRequest(toolName: toolName, arguments: arguments)
+
+        // Post the request on the main actor so the UI can observe it
+        await MainActor.run {
+            self.pendingConfirmation = request
+        }
+
+        // Suspend until user responds
+        let approved = await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+            self.confirmationContinuation = continuation
+        }
+
+        // Clear the pending request
+        await MainActor.run {
+            self.pendingConfirmation = nil
+        }
+
+        return approved
+    }
+
+    /// Called by the UI when the user approves the pending tool execution.
+    func approveConfirmation() {
+        confirmationContinuation?.resume(returning: true)
+        confirmationContinuation = nil
+    }
+
+    /// Called by the UI when the user denies the pending tool execution.
+    func denyConfirmation() {
+        confirmationContinuation?.resume(returning: false)
+        confirmationContinuation = nil
+    }
+
     func unregister(_ name: String) {
         tools.removeValue(forKey: name)
     }
@@ -68,13 +124,4 @@ final class ToolRegistry {
         }
     }
 
-    func registerBuiltinTools() {
-        register(SystemSettingsTool())
-        register(ClipboardTool())
-        register(AppLauncherTool())
-        register(FileSearchTool())
-        register(ScreenCaptureTool())
-        register(UIAutomationTool())
-        register(ShellCommandTool())
-    }
 }

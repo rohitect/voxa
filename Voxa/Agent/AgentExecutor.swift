@@ -20,11 +20,13 @@ struct AgentCallbacks: Sendable {
 final class AgentExecutor {
     private let providerManager: LLMProviderManager
     private let toolRegistry: ToolRegistry
+    private let personaManager: PersonaManager?
     private let maxToolIterations = 10
 
-    init(providerManager: LLMProviderManager, toolRegistry: ToolRegistry) {
+    init(providerManager: LLMProviderManager, toolRegistry: ToolRegistry, personaManager: PersonaManager? = nil) {
         self.providerManager = providerManager
         self.toolRegistry = toolRegistry
+        self.personaManager = personaManager
     }
 
     /// Process a transcript through the agent pipeline.
@@ -66,10 +68,16 @@ final class AgentExecutor {
             return .chat("No LLM provider configured. Go to Settings > Agent to set one up.")
         }
 
-        // Update system prompt with current tool info
+        // Update system prompt with identity, memory, and tool info
         let toolDefs = toolRegistry.enabledDefinitions
         let hasTools = !toolDefs.isEmpty
-        session.setSystemPrompt(buildSystemPrompt(toolNames: hasTools ? toolDefs.map(\.name) : []))
+        let toolNames = hasTools ? toolDefs.map(\.name) : []
+        let sessionContext = session.messages.suffix(4).compactMap(\.content).joined(separator: " ")
+        if let persona = personaManager {
+            session.setSystemPrompt(persona.buildSystemPrompt(toolNames: toolNames, sessionContext: sessionContext))
+        } else {
+            session.setSystemPrompt(buildSystemPrompt(toolNames: toolNames))
+        }
 
         // Add user message
         session.addUserMessage(transcript)
@@ -77,18 +85,55 @@ final class AgentExecutor {
         let model = providerManager.activeModel
         var toolsUsed: [String] = []
 
+        // Build trace
+        let providerName = String(describing: type(of: provider)).replacingOccurrences(of: "Provider", with: "")
+        let systemPromptLen = session.messages.first { $0.role == .system }?.content?.count ?? 0
+        let agentName = personaManager?.agentName ?? "Voxa"
+        var trace = MessageTrace(agentName: agentName, provider: providerName, model: model, systemPromptLength: systemPromptLen)
+
         // Agentic tool loop
+        var lastToolOutputs: [(name: String, output: String)] = []
+
         for iteration in 0..<maxToolIterations {
             try Task.checkCancellation()
 
+            let messageCount = session.llmMessages.count
+            let toolCount = hasTools ? toolDefs.count : 0
+            trace.append(TraceEntry(.llmRequest(messageCount: messageCount, toolCount: toolCount, iteration: iteration + 1)))
+
             // Stream LLM response
-            let response = try await streamLLMResponse(
-                provider: provider,
-                messages: session.llmMessages,
-                model: model,
-                tools: hasTools ? toolDefs : nil,
-                callbacks: callbacks
-            )
+            let response: ChatResponse
+            do {
+                response = try await streamLLMResponse(
+                    provider: provider,
+                    messages: session.llmMessages,
+                    model: model,
+                    tools: hasTools ? toolDefs : nil,
+                    callbacks: callbacks
+                )
+            } catch {
+                trace.append(TraceEntry(.error("LLM stream failed: \(error.localizedDescription)")))
+                trace.finish()
+
+                // If LLM fails mid-tool-loop, return tool results instead of losing everything
+                if !lastToolOutputs.isEmpty {
+                    let summary = lastToolOutputs.map { "[\($0.name)]\n\($0.output)" }.joined(separator: "\n\n")
+                    let errorNote = "LLM error after tool execution: \(error.localizedDescription)"
+                    let fallbackText = "\(errorNote)\n\nTool results:\n\(summary)"
+                    session.addAssistantMessage(ChatMessage(role: .assistant, content: fallbackText))
+                    return .withTools(fallbackText, tools: toolsUsed, trace: trace)
+                }
+                throw error
+            }
+
+            // Record LLM response in trace
+            let toolCallSummaries: [ToolCallSummary]? = response.message.toolCalls?.map { call in
+                ToolCallSummary(from: call, isMCP: isMCPTool(call.name))
+            }
+            trace.append(TraceEntry(.llmResponse(
+                content: response.message.content,
+                toolCalls: toolCallSummaries
+            )))
 
             // Add assistant message to session
             session.addAssistantMessage(response.message)
@@ -98,40 +143,60 @@ final class AgentExecutor {
                   let toolCalls = response.message.toolCalls,
                   !toolCalls.isEmpty else {
                 // Final text response
+                trace.finish(usage: response.usage.map { TraceTokenUsage(from: $0) })
                 let content = response.message.content ?? ""
                 if toolsUsed.isEmpty {
-                    return .chat(content)
+                    return .chat(content, trace: trace)
                 } else {
-                    return .withTools(content, tools: toolsUsed)
+                    return .withTools(content, tools: toolsUsed, trace: trace)
                 }
             }
 
             print("[AgentExecutor] Iteration \(iteration + 1): \(toolCalls.count) tool call(s)")
 
             // Execute tools — parallel when multiple, sequential when single
-            let results: [(ToolCall, ToolResult)]
+            let results: [(ToolCall, ToolResult, Int)]  // added durationMs
             if toolCalls.count == 1 {
                 let call = toolCalls[0]
                 await callbacks.onToolStart(call.name)
+                let start = Date()
                 let result = await executeToolSafely(call)
+                let durationMs = Int(Date().timeIntervalSince(start) * 1000)
                 await callbacks.onToolEnd(call.name, result.isError)
-                results = [(call, result)]
+                results = [(call, result, durationMs)]
             } else {
-                results = await executeToolsInParallel(toolCalls, callbacks: callbacks)
+                results = await executeToolsInParallelTimed(toolCalls, callbacks: callbacks)
             }
 
-            // Add results to session (truncate large outputs to avoid exceeding LLM context)
-            for (call, result) in results {
+            // Track tool outputs for fallback display
+            lastToolOutputs = results.map { (name: $0.0.name, output: $0.1.output) }
+
+            // Add results to session and trace
+            for (call, result, durationMs) in results {
                 let truncated = Self.truncateToolOutput(result.output)
-                session.addToolResult(content: truncated, toolCallId: call.id)
+                session.addToolResult(content: truncated, toolCallId: call.id, toolName: call.name)
                 toolsUsed.append(call.name)
+
+                trace.append(TraceEntry(.toolExecution(ToolCallSummary(
+                    id: call.id,
+                    name: call.name,
+                    arguments: call.arguments,
+                    output: result.output,
+                    isError: result.isError,
+                    durationMs: durationMs,
+                    isMCP: isMCPTool(call.name)
+                ))))
+
                 print("[AgentExecutor] \(call.name): \(result.isError ? "ERROR" : "OK") (\(result.output.count) chars)")
             }
         }
 
-        // Hit max iterations — ask LLM for a summary of what happened
+        // Hit max iterations
+        trace.append(TraceEntry(.error("Hit max tool iterations (\(maxToolIterations))")))
+        trace.finish()
         let content = "I used several tools but couldn't complete the task within \(maxToolIterations) iterations."
-        return .withTools(content, tools: toolsUsed)
+        session.addAssistantMessage(ChatMessage(role: .assistant, content: content))
+        return .withTools(content, tools: toolsUsed, trace: trace)
     }
 
     // MARK: - Streaming
@@ -202,7 +267,6 @@ final class AgentExecutor {
         _ toolCalls: [ToolCall],
         callbacks: AgentCallbacks
     ) async -> [(ToolCall, ToolResult)] {
-        // Use a dictionary to collect results since TaskGroup may return in any order
         let resultPairs = await withTaskGroup(
             of: (Int, ToolCall, ToolResult).self,
             returning: [(ToolCall, ToolResult)].self
@@ -220,11 +284,45 @@ final class AgentExecutor {
             for await entry in group {
                 collected.append(entry)
             }
-            // Return in original order
             return collected.sorted { $0.0 < $1.0 }.map { ($0.1, $0.2) }
         }
 
         return resultPairs
+    }
+
+    /// Execute multiple tool calls in parallel, returning timing info for trace.
+    private func executeToolsInParallelTimed(
+        _ toolCalls: [ToolCall],
+        callbacks: AgentCallbacks
+    ) async -> [(ToolCall, ToolResult, Int)] {
+        let resultPairs = await withTaskGroup(
+            of: (Int, ToolCall, ToolResult, Int).self,
+            returning: [(ToolCall, ToolResult, Int)].self
+        ) { group in
+            for (index, call) in toolCalls.enumerated() {
+                group.addTask {
+                    await callbacks.onToolStart(call.name)
+                    let start = Date()
+                    let result = await self.executeToolSafely(call)
+                    let durationMs = Int(Date().timeIntervalSince(start) * 1000)
+                    await callbacks.onToolEnd(call.name, result.isError)
+                    return (index, call, result, durationMs)
+                }
+            }
+
+            var collected: [(Int, ToolCall, ToolResult, Int)] = []
+            for await entry in group {
+                collected.append(entry)
+            }
+            return collected.sorted { $0.0 < $1.0 }.map { ($0.1, $0.2, $0.3) }
+        }
+
+        return resultPairs
+    }
+
+    /// Check if a tool name corresponds to an MCP tool (contains a dot separator).
+    private func isMCPTool(_ name: String) -> Bool {
+        name.contains(".")
     }
 
     // MARK: - Output Truncation

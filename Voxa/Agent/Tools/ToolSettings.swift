@@ -6,7 +6,7 @@ final class ToolSettings {
     private let keyPrefix = "agent.tool.enabled."
 
     /// Tools disabled by default.
-    private let disabledByDefault: Set<String> = ["shell_command"]
+    private let disabledByDefault: Set<String> = ["shell_command", "applescript"]
 
     func isEnabled(_ toolName: String) -> Bool {
         let key = keyPrefix + toolName

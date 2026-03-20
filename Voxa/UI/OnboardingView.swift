@@ -70,6 +70,7 @@ struct OnboardingView: View {
             .padding()
         }
         .frame(width: 440, height: 380)
+        .background(Color.clear)
     }
 
     // MARK: - Steps

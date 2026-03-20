@@ -1,14 +1,14 @@
 import AppKit
 import SwiftUI
 
-/// A floating panel that displays the agent's chat interface.
-/// Supports two modes: persistent (stays open) and pop-up (auto-dismisses).
+/// Facade for the agent chat UI — now embedded in the companion window.
+/// All callers continue using `AgentPanel.shared`; the chat appears inline
+/// within the companion orb's panel instead of a separate floating window.
 final class AgentPanel {
     static let shared = AgentPanel()
 
-    private var panel: NSPanel?
-    private var dismissTimer: Timer?
     let state = AgentPanelState()
+    private var dismissTimer: Timer?
 
     private init() {}
 
@@ -32,7 +32,6 @@ final class AgentPanel {
 
     /// Append a text delta from the LLM stream.
     func appendStreamingText(_ delta: String) {
-        // Transition from processing to streaming on first delta
         if state.isProcessing {
             state.isProcessing = false
         }
@@ -85,7 +84,7 @@ final class AgentPanel {
         finalizeResponse(response, session: session)
     }
 
-    /// Show the panel (for text input flow).
+    /// Show the panel (expand chat from companion).
     func show() {
         showPanel()
     }
@@ -93,72 +92,23 @@ final class AgentPanel {
     func dismiss() {
         dismissTimer?.invalidate()
         dismissTimer = nil
-        panel?.orderOut(nil)
+        CompanionWindow.shared.collapseChat()
     }
 
     func toggle() {
-        if panel?.isVisible == true {
-            dismiss()
-        } else {
-            showPanel()
-        }
+        CompanionWindow.shared.toggleChat()
     }
 
-    // MARK: - Panel Management
+    // MARK: - Private
 
     private func showPanel() {
-        if panel == nil {
-            createPanel()
+        // Ensure the companion orb is visible, then expand chat from it.
+        if !CompanionWindow.shared.isShown {
+            CompanionWindow.shared.show()
         }
-        updatePanelSize()
-        positionPanel()
-        panel?.orderFrontRegardless()
-    }
-
-    private func createPanel() {
-        let content = AgentPanelContent(state: state, onDismiss: { [weak self] in
-            self?.dismiss()
-        }, onNewSession: { [weak self] in
-            self?.state.requestNewSession?()
-        })
-        let hostingView = NSHostingView(rootView: content)
-
-        let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 500),
-            styleMask: [.titled, .closable, .resizable, .nonactivatingPanel, .hudWindow],
-            backing: .buffered,
-            defer: false
-        )
-        panel.title = "Voxa Agent"
-        panel.isFloatingPanel = true
-        panel.level = .floating
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        panel.isOpaque = false
-        panel.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.95)
-        panel.hasShadow = true
-        panel.isMovableByWindowBackground = true
-        panel.hidesOnDeactivate = false
-        panel.contentView = hostingView
-        panel.minSize = NSSize(width: 300, height: 200)
-
-        self.panel = panel
-    }
-
-    private func updatePanelSize() {
-        guard let panel else { return }
-        let size: NSSize = state.panelMode == .persistent
-            ? NSSize(width: 400, height: 500)
-            : NSSize(width: 340, height: 240)
-        panel.setContentSize(size)
-    }
-
-    private func positionPanel() {
-        guard let panel, let screen = NSScreen.main else { return }
-        // Position in the top-right corner of the screen
-        let screenFrame = screen.visibleFrame
-        let x = screenFrame.maxX - panel.frame.width - 20
-        let y = screenFrame.maxY - panel.frame.height - 20
-        panel.setFrameOrigin(NSPoint(x: x, y: y))
+        if !CompanionState.shared.isChatExpanded {
+            CompanionWindow.shared.expandChat()
+        }
     }
 
     private func scheduleAutoDismiss() {
@@ -180,6 +130,7 @@ final class AgentPanelState {
     var streamingText = ""
     var statusMessage: String?
     var currentToolName: String?
+    var toolRegistry: ToolRegistry?
 
     /// Persistent or pop-up mode.
     var panelMode: PanelMode {

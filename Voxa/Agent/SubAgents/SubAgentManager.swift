@@ -1,62 +1,56 @@
 import Foundation
 
-/// Manages sub-agent definitions, active runners, and concurrency enforcement.
+/// Manages sub-agent definitions loaded from ~/.voxa/agent/agents/*.md,
+/// active runners, and concurrency enforcement.
 @Observable
 final class SubAgentManager {
-    /// All loaded definitions (builtin + custom), keyed by id.
+    /// All loaded definitions, keyed by id.
     private(set) var definitions: [String: SubAgentDefinition] = [:]
-
-    /// Sources for each definition.
-    private(set) var sources: [String: SubAgentSource] = [:]
 
     /// Currently running sub-agent tasks.
     private(set) var activeRunners: [String: SubAgentRunner] = [:]
 
-    private weak var parentRegistry: ToolRegistry?
+    private let configStore: MCPServerConfigStore
     private weak var providerManager: LLMProviderManager?
 
     private let maxConcurrent = 3
 
-    init(parentRegistry: ToolRegistry, providerManager: LLMProviderManager) {
-        self.parentRegistry = parentRegistry
+    init(configStore: MCPServerConfigStore, providerManager: LLMProviderManager) {
+        self.configStore = configStore
         self.providerManager = providerManager
         loadDefinitions()
     }
 
     // MARK: - Definition Management
 
+    /// Load all definitions from agents.md files on disk.
     func loadDefinitions() {
-        // Load builtins
-        for def in SubAgentDefinition.builtins {
+        definitions.removeAll()
+        for def in SubAgentDefinition.loadAll() {
             definitions[def.id] = def
-            sources[def.id] = .builtin
-        }
-
-        // Load custom
-        for (def, source) in SubAgentDefinition.loadCustomDefinitions() {
-            definitions[def.id] = def
-            sources[def.id] = source
         }
     }
 
-    /// Reload only custom definitions from disk.
-    func reloadCustom() {
-        // Remove existing custom definitions
-        let customIds = sources.filter {
-            if case .custom = $0.value { return true }
-            return false
-        }.map(\.key)
+    /// Reload definitions from disk.
+    func reload() {
+        loadDefinitions()
+    }
 
-        for id in customIds {
-            definitions.removeValue(forKey: id)
-            sources.removeValue(forKey: id)
+    /// Add or update a definition and save to disk.
+    func save(_ definition: SubAgentDefinition) {
+        var def = definition
+        if def.filePath == nil {
+            def.filePath = SubAgentDefinition.agentsDirectory
+                .appendingPathComponent("\(def.id).md").path
         }
+        def.save()
+        definitions[def.id] = def
+    }
 
-        // Reload
-        for (def, source) in SubAgentDefinition.loadCustomDefinitions() {
-            definitions[def.id] = def
-            sources[def.id] = source
-        }
+    /// Delete a definition from memory and disk.
+    func delete(_ definition: SubAgentDefinition) {
+        definition.deleteFile()
+        definitions.removeValue(forKey: definition.id)
     }
 
     // MARK: - Enable/Disable
@@ -80,18 +74,9 @@ final class SubAgentManager {
             .sorted { $0.name < $1.name }
     }
 
-    /// All definitions sorted: builtins first, then custom, each alphabetical.
+    /// All definitions sorted alphabetically.
     var sortedDefinitions: [SubAgentDefinition] {
-        let builtins = definitions.values
-            .filter { sources[$0.id] == .builtin }
-            .sorted { $0.name < $1.name }
-        let custom = definitions.values
-            .filter {
-                if case .custom = sources[$0.id] { return true }
-                return false
-            }
-            .sorted { $0.name < $1.name }
-        return builtins + custom
+        definitions.values.sorted { $0.name < $1.name }
     }
 
     // MARK: - Delegation
@@ -107,7 +92,7 @@ final class SubAgentManager {
         guard activeRunners.count < maxConcurrent else {
             throw SubAgentError.concurrencyLimit
         }
-        guard let parentRegistry, let providerManager else {
+        guard let providerManager else {
             throw SubAgentError.noProvider
         }
 
@@ -127,11 +112,16 @@ final class SubAgentManager {
             model = definition.modelOverride ?? providerManager.activeModel
         }
 
+        // Resolve MCP server configs for this agent
+        let mcpConfigs = definition.mcpServers.compactMap { serverId in
+            configStore.server(id: serverId)
+        }
+
         let runner = SubAgentRunner(
             definition: definition,
             provider: provider,
             model: model,
-            parentRegistry: parentRegistry
+            mcpConfigs: mcpConfigs
         )
 
         // Track active runner
@@ -149,7 +139,6 @@ final class SubAgentManager {
                 throw SubAgentError.timeout(agentId)
             }
 
-            // First to complete wins
             guard let result = try await group.next() else {
                 throw SubAgentError.timeout(agentId)
             }
@@ -164,18 +153,6 @@ final class SubAgentManager {
     /// Cancel all active sub-agent runners.
     func cancelAll() {
         activeRunners.removeAll()
-    }
-}
-
-// MARK: - Sub-Agent Source Equatable
-
-extension SubAgentSource: Equatable {
-    static func == (lhs: SubAgentSource, rhs: SubAgentSource) -> Bool {
-        switch (lhs, rhs) {
-        case (.builtin, .builtin): return true
-        case (.custom(let a), .custom(let b)): return a == b
-        default: return false
-        }
     }
 }
 

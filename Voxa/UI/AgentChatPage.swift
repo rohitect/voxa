@@ -23,13 +23,17 @@ struct AgentChatPage: View {
                     panelState.session = coordinator.session
                 }
             )
-            .frame(width: 220)
+            .frame(width: 240)
 
             Divider()
 
             ChatMainArea(
                 coordinator: coordinator,
-                panelState: panelState
+                panelState: panelState,
+                onDelete: {
+                    store.delete(coordinator.session)
+                    panelState.session = coordinator.session
+                }
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -48,43 +52,74 @@ private struct ChatSidebar: View {
     let onDelete: (ChatSession) -> Void
     let onDeleteAll: () -> Void
 
+    @State private var searchText = ""
+
+    private var filteredGroups: [(title: String, sessions: [ChatSession])] {
+        let groups = store.groupedConversations
+        guard !searchText.isEmpty else { return groups }
+        return groups.compactMap { group in
+            let filtered = group.sessions.filter {
+                $0.title.localizedCaseInsensitiveContains(searchText)
+            }
+            return filtered.isEmpty ? nil : (title: group.title, sessions: filtered)
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             newChatButton
-            Divider().padding(.horizontal, 10)
+            searchField
+            Divider().padding(.horizontal, 12)
             conversationList
             Spacer(minLength: 0)
             clearAllButton
         }
-        .background(Color(.windowBackgroundColor).opacity(0.5))
+        .background(Color.primary.opacity(0.04))
     }
 
     private var newChatButton: some View {
         Button(action: onNew) {
             HStack(spacing: 8) {
                 Image(systemName: "plus")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12, weight: .bold))
                 Text("New Chat")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
+                    .font(.subheadline.weight(.semibold))
                 Spacer()
+                Text("⌘N")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(Color.accentColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+            .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.borderless)
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 12)
         .padding(.top, 12)
+        .padding(.bottom, 6)
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
+            TextField("Search chats...", text: $searchText)
+                .textFieldStyle(.plain)
+                .font(.subheadline)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal, 12)
         .padding(.bottom, 8)
     }
 
     private var conversationList: some View {
         ScrollView {
             LazyVStack(spacing: 2) {
-                let groups = store.groupedConversations
-                ForEach(groups.indices, id: \.self) { index in
-                    let group = groups[index]
+                ForEach(filteredGroups.indices, id: \.self) { index in
+                    let group = filteredGroups[index]
                     sectionHeader(group.title)
                     ForEach(group.sessions) { conversation in
                         ConversationRow(
@@ -96,25 +131,25 @@ private struct ChatSidebar: View {
                     }
                 }
             }
-            .padding(.horizontal, 6)
+            .padding(.horizontal, 8)
             .padding(.vertical, 4)
         }
     }
 
     private func sectionHeader(_ title: String) -> some View {
-        Text(title)
-            .font(.caption)
-            .fontWeight(.semibold)
+        Text(title.uppercased())
+            .font(.system(size: 10, weight: .semibold))
             .foregroundStyle(.tertiary)
+            .tracking(0.5)
             .padding(.horizontal, 14)
-            .padding(.top, 12)
+            .padding(.top, 14)
             .padding(.bottom, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var clearAllButton: some View {
         VStack(spacing: 0) {
-            Divider().padding(.horizontal, 10)
+            Divider().padding(.horizontal, 12)
             Button(role: .destructive, action: onDeleteAll) {
                 HStack(spacing: 6) {
                     Image(systemName: "trash")
@@ -142,10 +177,11 @@ private struct ConversationRow: View {
 
     var body: some View {
         Button(action: onSelect) {
-            HStack(spacing: 8) {
-                Image(systemName: "bubble.left")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            HStack(spacing: 10) {
+                Image(systemName: isSelected ? "bubble.left.fill" : "bubble.left")
+                    .font(.system(size: 11))
+                    .foregroundColor(isSelected ? .accentColor : .gray)
+                    .frame(width: 16)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(conversation.title)
@@ -166,10 +202,13 @@ private struct ConversationRow: View {
                 if isHovered {
                     Button(action: onDelete) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.tertiary)
+                            .frame(width: 20, height: 20)
+                            .background(Color.primary.opacity(0.08), in: Circle())
                     }
                     .buttonStyle(.borderless)
+                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
                 }
             }
             .padding(.horizontal, 10)
@@ -178,11 +217,12 @@ private struct ConversationRow: View {
         }
         .buttonStyle(.borderless)
         .onHover { isHovered = $0 }
+        .animation(.easeOut(duration: 0.15), value: isHovered)
     }
 
     private var rowBackground: Color {
         if isSelected { return Color.accentColor.opacity(0.12) }
-        if isHovered { return Color(.controlBackgroundColor).opacity(0.6) }
+        if isHovered { return Color.primary.opacity(0.04) }
         return .clear
     }
 
@@ -198,8 +238,10 @@ private struct ConversationRow: View {
 private struct ChatMainArea: View {
     let coordinator: AgentCoordinator
     let panelState: AgentPanelState
+    let onDelete: () -> Void
 
     @State private var inputText = ""
+    @State private var showDeleteConfirmation = false
     @FocusState private var isInputFocused: Bool
 
     private var isBusy: Bool {
@@ -211,9 +253,9 @@ private struct ChatMainArea: View {
             topBar
             Divider()
             chatArea
-            Divider()
             inputBar
         }
+        .background(Color.clear)
     }
 
     // MARK: - Top Bar
@@ -227,20 +269,40 @@ private struct ChatMainArea: View {
             Spacer()
 
             HStack(spacing: 6) {
-                Circle().fill(.green).frame(width: 6, height: 6)
+                Circle()
+                    .fill(.green)
+                    .frame(width: 6, height: 6)
                 Text(coordinator.providerManager.activeProviderName)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Text("·")
+                    .foregroundStyle(.quaternary)
                 Text(coordinator.providerManager.activeModel)
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(Color(.controlBackgroundColor), in: Capsule())
+            .padding(.vertical, 5)
+            .background(Color.primary.opacity(0.06), in: Capsule())
+
+            Button {
+                showDeleteConfirmation = true
+            } label: {
+                Image(systemName: "trash")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.borderless)
+            .help("Delete conversation")
+            .alert("Delete conversation?", isPresented: $showDeleteConfirmation) {
+                Button("Delete", role: .destructive, action: onDelete)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This conversation will be permanently deleted.")
+            }
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
     }
 
     // MARK: - Chat Area
@@ -249,8 +311,14 @@ private struct ChatMainArea: View {
         ScrollViewReader { proxy in
             ScrollView {
                 chatMessages
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 20)
+                    .padding(.vertical, 16)
+            }
+            .scrollContentBackground(.hidden)
+            .onAppear {
+                // Scroll without animation on initial load to avoid layout loop
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    proxy.scrollTo("bottomAnchor", anchor: .bottom)
+                }
             }
             .onChange(of: panelState.session?.displayMessages.count) { _, _ in
                 scrollToEnd(proxy)
@@ -272,68 +340,95 @@ private struct ChatMainArea: View {
     }
 
     private var chatMessages: some View {
-        LazyVStack(alignment: .leading, spacing: 16) {
-            // Existing messages
+        VStack(alignment: .leading, spacing: 0) {
             if let session = panelState.session {
-                ForEach(session.displayMessages) { message in
-                    ChatBubble(message: message)
-                        .id(message.id)
+                let messages = session.displayMessages
+                ForEach(Array(messages.enumerated()), id: \.element.id) { index, message in
+                    ChatBubble(
+                        message: message,
+                        isFirstInGroup: isFirstInGroup(index, messages: messages)
+                    )
+                    .id(message.id)
                 }
             }
 
-            // Streaming response
             if panelState.isStreaming, !panelState.streamingText.isEmpty {
                 streamingBubble.id("streaming")
             }
 
-            // Status indicators
+            // Tool confirmation banner
+            if let confirmation = coordinator.toolRegistry.pendingConfirmation {
+                ToolConfirmationBanner(
+                    request: confirmation,
+                    onApprove: { coordinator.toolRegistry.approveConfirmation() },
+                    onDeny: { coordinator.toolRegistry.denyConfirmation() }
+                )
+                .id("confirmation")
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+
             if panelState.isListening {
                 listeningIndicator.id("status")
             } else if panelState.isProcessing {
                 processingIndicator.id("status")
             }
 
-            // Empty state
             if !hasMessages && !isBusy {
                 emptyState.id("empty")
             }
+
+            // Stable anchor at the bottom for reliable scrolling
+            Color.clear.frame(height: 1).id("bottomAnchor")
         }
+    }
+
+    private func isFirstInGroup(_ index: Int, messages: [DisplayMessage]) -> Bool {
+        guard index > 0 else { return true }
+        return messages[index].role != messages[index - 1].role
     }
 
     private var streamingBubble: some View {
         HStack(alignment: .top, spacing: 10) {
             agentAvatar
-            Text(panelState.streamingText)
-                .font(.body)
-                .textSelection(.enabled)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(Color(.controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
+            VStack(alignment: .leading, spacing: 6) {
+                MarkdownView(panelState.streamingText, fontSize: 13, isUser: false)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 16))
+                TypingDotsView()
+                    .padding(.leading, 14)
+            }
             Spacer(minLength: 60)
         }
+        .padding(.horizontal, 28)
+        .padding(.vertical, 8)
     }
 
     private var listeningIndicator: some View {
         statusRow {
-            Circle().fill(.red).frame(width: 10, height: 10)
-                .modifier(PulseModifier())
-            Text("Listening...")
-                .font(.callout)
-                .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                ListeningWaveView()
+                    .frame(width: 24, height: 16)
+                Text("Listening...")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
     private var processingIndicator: some View {
         statusRow {
-            ProgressView().controlSize(.small)
-            if let toolName = panelState.currentToolName {
-                Label(toolDisplayName(toolName), systemImage: "gearshape.fill")
-                    .font(.callout)
-                    .foregroundStyle(.orange)
-            } else {
-                Text("Thinking...")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                if let toolName = panelState.currentToolName {
+                    Label(toolDisplayName(toolName), systemImage: "gearshape.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.orange)
+                } else {
+                    Text("Thinking...")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -341,56 +436,84 @@ private struct ChatMainArea: View {
     // MARK: - Input Bar
 
     private var inputBar: some View {
-        HStack(alignment: .bottom, spacing: 10) {
-            TextField("Send a message...", text: $inputText, axis: .vertical)
-                .textFieldStyle(.plain)
-                .lineLimit(1...8)
-                .focused($isInputFocused)
-                .onSubmit { sendMessage() }
-                .disabled(isBusy)
-                .font(.body)
+        VStack(spacing: 0) {
+            Divider().opacity(0.5)
+            HStack(alignment: .center, spacing: 12) {
+                TextField("Message Voxa...", text: $inputText, axis: .vertical)
+                    .textFieldStyle(.plain)
+                    .lineLimit(1...8)
+                    .focused($isInputFocused)
+                    .onSubmit { sendMessage() }
+                    .disabled(isBusy)
+                    .font(.body)
 
-            Button(action: sendMessage) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 26))
-                    .foregroundStyle(canSend ? Color.accentColor : Color.secondary.opacity(0.3))
+                Button(action: sendMessage) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 28))
+                        .foregroundStyle(canSend ? Color.accentColor : Color.secondary.opacity(0.2))
+                        .symbolRenderingMode(.hierarchical)
+                }
+                .buttonStyle(.borderless)
+                .disabled(!canSend)
+                .keyboardShortcut(.return, modifiers: [])
             }
-            .buttonStyle(.borderless)
-            .disabled(!canSend)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .strokeBorder(Color.primary.opacity(isInputFocused ? 0.15 : 0.08), lineWidth: 1)
+            )
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 14)
+        .contentShape(Rectangle())
+        .onTapGesture { isInputFocused = true }
     }
 
     // MARK: - Empty State
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Spacer().frame(height: 40)
-            Image(systemName: "brain.head.profile")
-                .font(.system(size: 44))
-                .foregroundStyle(.quaternary)
-            Text("How can I help?")
-                .font(.title2)
-                .fontWeight(.medium)
-                .foregroundStyle(.secondary)
-            Text("Type a message below or hold the agent hotkey to speak.")
-                .font(.subheadline)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 320)
+        VStack(spacing: 20) {
+            Spacer().frame(height: 60)
+
+            ZStack {
+                Circle()
+                    .fill(Color.accentColor.opacity(0.08))
+                    .frame(width: 80, height: 80)
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 36))
+                    .foregroundStyle(Color.accentColor.opacity(0.6))
+            }
+
+            VStack(spacing: 8) {
+                Text("How can I help?")
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Text("Type a message below or hold the agent hotkey to speak.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 340)
+            }
+
             suggestionChips
+                .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
     }
 
     private var suggestionChips: some View {
-        HStack(spacing: 8) {
-            chipButton("What's on my clipboard?")
-            chipButton("Find files on Desktop")
-            chipButton("Take a screenshot")
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                chipButton("What's on my clipboard?", icon: "doc.on.clipboard")
+                chipButton("Take a screenshot", icon: "camera.viewfinder")
+            }
+            HStack(spacing: 8) {
+                chipButton("Find files on Desktop", icon: "folder.badge.magnifyingglass")
+                chipButton("Summarize selected text", icon: "text.quote")
+            }
         }
-        .padding(.top, 4)
     }
 
     // MARK: - Helpers
@@ -408,54 +531,56 @@ private struct ChatMainArea: View {
         guard !text.isEmpty, !isBusy else { return }
         inputText = ""
         coordinator.sendTextMessage(text)
+        isInputFocused = true
     }
 
     private func scrollToEnd(_ proxy: ScrollViewProxy) {
-        let target: String
-        if panelState.isListening || panelState.isProcessing {
-            target = "status"
-        } else if panelState.isStreaming {
-            target = "streaming"
-        } else if let last = panelState.session?.displayMessages.last {
-            target = last.id.uuidString
-        } else { return }
         withAnimation(.easeOut(duration: 0.2)) {
-            proxy.scrollTo(target, anchor: .bottom)
+            proxy.scrollTo("bottomAnchor", anchor: .bottom)
         }
     }
 
-    private func chipButton(_ text: String) -> some View {
+    private func chipButton(_ text: String, icon: String) -> some View {
         Button {
             inputText = ""
             coordinator.sendTextMessage(text)
         } label: {
-            Text(text)
-                .font(.caption)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(Color(.controlBackgroundColor), in: Capsule())
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                Text(text)
+                    .font(.caption)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity)
+            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
+            )
         }
         .buttonStyle(.borderless)
         .disabled(isBusy)
     }
 
     private func statusRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        HStack(alignment: .center, spacing: 10) {
+        HStack(alignment: .center, spacing: 12) {
             agentAvatar
-            HStack(spacing: 8) { content() }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(Color(.controlBackgroundColor).opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
+            content()
             Spacer()
         }
+        .padding(.horizontal, 28)
+        .padding(.vertical, 12)
     }
 
     private var agentAvatar: some View {
         Image(systemName: "brain.head.profile")
-            .font(.system(size: 14))
+            .font(.system(size: 14, weight: .medium))
             .foregroundStyle(.secondary)
-            .frame(width: 28, height: 28)
-            .background(Color(.controlBackgroundColor), in: Circle())
+            .frame(width: 30, height: 30)
+            .background(Color.primary.opacity(0.06), in: Circle())
     }
 
     private func toolDisplayName(_ name: String) -> String {
@@ -467,58 +592,274 @@ private struct ChatMainArea: View {
 
 private struct ChatBubble: View {
     let message: DisplayMessage
+    let isFirstInGroup: Bool
+    @State private var isHovered = false
+    @State private var showCopied = false
+    @State private var showTrace = false
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        Group {
             if message.role == .user {
-                Spacer(minLength: 60)
                 userBubble
             } else {
                 assistantBubble
-                Spacer(minLength: 60)
+            }
+        }
+        .sheet(isPresented: $showTrace) {
+            if let trace = message.trace {
+                TraceInspectorView(trace: trace)
             }
         }
     }
 
+    // MARK: User Bubble — right-aligned with accent background
+
     private var userBubble: some View {
-        VStack(alignment: .trailing, spacing: 4) {
-            Text(message.content)
-                .font(.body)
-                .textSelection(.enabled)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 14))
-                .foregroundStyle(.white)
-            Text(timeString)
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+        HStack(alignment: .bottom, spacing: 8) {
+            Spacer(minLength: 80)
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(message.content)
+                    .font(.body)
+                    .lineSpacing(2)
+                    .textSelection(.enabled)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.accentColor, in: BubbleShape(isUser: true))
+                    .foregroundStyle(.white)
+
+                messageActions(alignment: .trailing)
+            }
         }
+        .onHover { isHovered = $0 }
+        .animation(.easeOut(duration: 0.15), value: isHovered)
+        .padding(.horizontal, 28)
+        .padding(.top, isFirstInGroup ? 16 : 4)
+        .padding(.bottom, 4)
     }
+
+    // MARK: Assistant Bubble — left-aligned with background
 
     private var assistantBubble: some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "brain.head.profile")
-                .font(.system(size: 14))
-                .foregroundStyle(.secondary)
-                .frame(width: 28, height: 28)
-                .background(Color(.controlBackgroundColor), in: Circle())
+            if isFirstInGroup {
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 30, height: 30)
+                    .background(Color.primary.opacity(0.06), in: Circle())
+            } else {
+                Spacer().frame(width: 30)
+            }
+
             VStack(alignment: .leading, spacing: 4) {
-                Text(message.content)
-                    .font(.body)
-                    .textSelection(.enabled)
+                MarkdownView(message.content, fontSize: 13, isUser: false)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .background(Color(.controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
-                Text(timeString)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .background(Color.primary.opacity(0.06), in: BubbleShape(isUser: false))
+
+                messageActions(alignment: .leading)
             }
+
+            Spacer(minLength: 60)
         }
+        .onHover { isHovered = $0 }
+        .animation(.easeOut(duration: 0.15), value: isHovered)
+        .padding(.horizontal, 28)
+        .padding(.top, isFirstInGroup ? 16 : 4)
+        .padding(.bottom, 4)
+    }
+
+    // MARK: Message Actions (hover only)
+
+    private func messageActions(alignment: HorizontalAlignment) -> some View {
+        HStack(spacing: 2) {
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(message.content, forType: .string)
+                showCopied = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { showCopied = false }
+            } label: {
+                Image(systemName: showCopied ? "checkmark" : "doc.on.doc")
+                    .font(.system(size: 11))
+                    .foregroundStyle(showCopied ? .green : .secondary)
+                    .frame(width: 26, height: 26)
+                    .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+            .help("Copy")
+
+            if message.trace != nil {
+                Button {
+                    showTrace = true
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 26, height: 26)
+                        .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
+                }
+                .buttonStyle(.plain)
+                .help("View trace")
+            }
+
+            Text(timeString)
+                .font(.caption2)
+                .foregroundStyle(.quaternary)
+                .padding(.horizontal, 6)
+        }
+        .padding(.top, 2)
     }
 
     private var timeString: String {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
         return formatter.string(from: message.timestamp)
+    }
+}
+
+// MARK: - Bubble Shape (with tail)
+
+private struct BubbleShape: Shape {
+    let isUser: Bool
+
+    func path(in rect: CGRect) -> Path {
+        let radius: CGFloat = 16
+        return Path(
+            roundedRect: rect,
+            cornerRadii: RectangleCornerRadii(
+                topLeading: radius,
+                bottomLeading: radius,
+                bottomTrailing: isUser ? 4 : radius,
+                topTrailing: radius
+            )
+        )
+    }
+}
+
+// MARK: - Typing Dots (streaming indicator)
+
+private struct TypingDotsView: View {
+    @State private var animating = false
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<3) { index in
+                Circle()
+                    .fill(Color.secondary.opacity(0.5))
+                    .frame(width: 5, height: 5)
+                    .offset(y: animating ? -3 : 0)
+                    .animation(
+                        .easeInOut(duration: 0.4)
+                        .repeatForever(autoreverses: true)
+                        .delay(Double(index) * 0.15),
+                        value: animating
+                    )
+            }
+        }
+        .onAppear { animating = true }
+    }
+}
+
+// MARK: - Tool Confirmation Banner
+
+private struct ToolConfirmationBanner: View {
+    let request: ToolConfirmationRequest
+    let onApprove: () -> Void
+    let onDeny: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.shield.fill")
+                .font(.system(size: 20))
+                .foregroundStyle(.orange)
+                .frame(width: 30, height: 30)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Tool requires confirmation")
+                    .font(.subheadline.weight(.semibold))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(request.toolName)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+
+                    if !request.arguments.isEmpty && request.arguments != "{}" {
+                        Text(formattedArguments)
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.secondary)
+                            .lineLimit(4)
+                            .padding(8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 6))
+                    }
+                }
+
+                HStack(spacing: 10) {
+                    Button(action: onApprove) {
+                        Label("Allow", systemImage: "checkmark")
+                            .font(.subheadline.weight(.medium))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 6)
+                            .background(.green.opacity(0.15), in: RoundedRectangle(cornerRadius: 8))
+                            .foregroundStyle(.green)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: onDeny) {
+                        Label("Deny", systemImage: "xmark")
+                            .font(.subheadline.weight(.medium))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 6)
+                            .background(.red.opacity(0.15), in: RoundedRectangle(cornerRadius: 8))
+                            .foregroundStyle(.red)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            Spacer(minLength: 40)
+        }
+        .padding(16)
+        .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(Color.orange.opacity(0.2), lineWidth: 1)
+        )
+        .padding(.horizontal, 28)
+        .padding(.vertical, 8)
+    }
+
+    private var formattedArguments: String {
+        guard let data = request.arguments.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data),
+              let pretty = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted),
+              let str = String(data: pretty, encoding: .utf8) else {
+            return request.arguments
+        }
+        return str
+    }
+}
+
+// MARK: - Listening Wave
+
+private struct ListeningWaveView: View {
+    @State private var animating = false
+    private let barHeights: [CGFloat] = [10, 16, 8, 14]
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(0..<4) { index in
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(Color.red.opacity(0.7))
+                    .frame(width: 3, height: animating ? barHeights[index] : 4)
+                    .animation(
+                        .easeInOut(duration: 0.3 + Double(index) * 0.1)
+                        .repeatForever(autoreverses: true)
+                        .delay(Double(index) * 0.08),
+                        value: animating
+                    )
+            }
+        }
+        .onAppear { animating = true }
     }
 }

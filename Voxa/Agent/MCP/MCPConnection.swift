@@ -36,6 +36,10 @@ final class MCPConnection {
     private var client: Client?
     private var transport: (any Transport)?
     private var serverProcess: Process?
+    // Keep pipes alive so their file descriptors remain valid for StdioTransport
+    private var stdinPipe: Pipe?
+    private var stdoutPipe: Pipe?
+    private var stderrPipe: Pipe?
 
     init(config: MCPServerConfig) {
         self.config = config
@@ -72,6 +76,9 @@ final class MCPConnection {
     func disconnect() async {
         serverProcess?.terminate()
         serverProcess = nil
+        stdinPipe = nil
+        stdoutPipe = nil
+        stderrPipe = nil
         client = nil
         transport = nil
         discoveredTools = []
@@ -104,31 +111,56 @@ final class MCPConnection {
                 throw ToolError.invalidArguments("No command specified for stdio transport")
             }
 
+            // Resolve {MCP_ROOT} placeholder to the managed directory path
+            let mcpRoot = config.managedDirectory?.path ?? ""
+            let resolvedCommand = command.replacingOccurrences(of: "{MCP_ROOT}", with: mcpRoot)
+            let resolvedArgs = (config.args ?? []).map {
+                $0.replacingOccurrences(of: "{MCP_ROOT}", with: mcpRoot)
+            }
+
             // Launch the MCP server as a subprocess
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-            process.arguments = [command] + (config.args ?? [])
+            process.arguments = [resolvedCommand] + resolvedArgs
 
-            if let env = config.env {
-                var environment = ProcessInfo.processInfo.environment
-                for (key, value) in env {
-                    environment[key] = value
-                }
-                process.environment = environment
+            // Always set up environment with Homebrew PATH for finding node/python
+            var environment = ProcessInfo.processInfo.environment
+            if let path = environment["PATH"] {
+                environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + path
             }
+            if let env = config.env {
+                for (key, value) in env {
+                    environment[key] = value.replacingOccurrences(of: "{MCP_ROOT}", with: mcpRoot)
+                }
+            }
+            process.environment = environment
 
-            let stdinPipe = Pipe()
-            let stdoutPipe = Pipe()
-            process.standardInput = stdinPipe
-            process.standardOutput = stdoutPipe
-            process.standardError = FileHandle.nullDevice
+            let stdin = Pipe()
+            let stdout = Pipe()
+            let stderr = Pipe()
+            process.standardInput = stdin
+            process.standardOutput = stdout
+            process.standardError = stderr
+
+            // Log stderr from MCP server for debugging
+            stderr.fileHandleForReading.readabilityHandler = { [weak self] handle in
+                let data = handle.availableData
+                if !data.isEmpty, let str = String(data: data, encoding: .utf8) {
+                    let name = self?.config.name ?? "?"
+                    print("[MCP:\(name)] \(str.trimmingCharacters(in: .whitespacesAndNewlines))")
+                }
+            }
 
             try process.run()
             self.serverProcess = process
+            // Keep pipes alive so file descriptors remain valid
+            self.stdinPipe = stdin
+            self.stdoutPipe = stdout
+            self.stderrPipe = stderr
 
             // Create StdioTransport using the process pipes' file descriptors
-            let inputFD = stdoutPipe.fileHandleForReading.fileDescriptor
-            let outputFD = stdinPipe.fileHandleForWriting.fileDescriptor
+            let inputFD = stdout.fileHandleForReading.fileDescriptor
+            let outputFD = stdin.fileHandleForWriting.fileDescriptor
             let transport = StdioTransport(
                 input: .init(rawValue: inputFD),
                 output: .init(rawValue: outputFD)
@@ -147,6 +179,15 @@ final class MCPConnection {
     }
 
     private func retryConnect() async {
+        // Clean up any previous process/pipes before retrying
+        serverProcess?.terminate()
+        serverProcess = nil
+        stdinPipe = nil
+        stdoutPipe = nil
+        stderrPipe = nil
+        client = nil
+        transport = nil
+
         status = .connecting
         do {
             let (createdClient, createdTransport) = try await createClientAndTransport()
