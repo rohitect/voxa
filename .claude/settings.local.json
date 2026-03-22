@@ -95,7 +95,12 @@
       "Bash(find /Users/rohitranjan/my/projects/voxa/Voxa/UI -type f -name *Chat* -o -name *Agent*)",
       "Bash(grep -i \"\\\\.swift$\")",
       "WebFetch(domain:swift-ai-sdk-docs.vercel.app)",
-      "Bash(find /Users/rohitranjan/my/projects/voxa -name \"*.swift\" -exec grep -l \"\\\\.chat\\\\|\\\\.assistant\\\\|\\\\.response\\\\|streaming\\\\|animation\" {})"
+      "Bash(find /Users/rohitranjan/my/projects/voxa -name \"*.swift\" -exec grep -l \"\\\\.chat\\\\|\\\\.assistant\\\\|\\\\.response\\\\|streaming\\\\|animation\" {})",
+      "Bash(head -20 /Users/rohitranjan/my/projects/voxa/Voxa/Agent/LLM/*.swift)",
+      "Bash(openssl version:*)",
+      "Bash(certtool)",
+      "Bash(certtool c:*)",
+      "Bash(gh --version)"
     ]
   }
 }

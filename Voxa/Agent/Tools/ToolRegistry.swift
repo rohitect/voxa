@@ -37,6 +37,16 @@ final class ToolRegistry {
         tools.values.sorted { $0.name < $1.name }
     }
 
+    /// Tools registered via `registerBuiltinTools` (no dot in name).
+    var builtinTools: [any AgentTool] {
+        tools.values.filter { !$0.name.contains(".") }.sorted { $0.name < $1.name }
+    }
+
+    /// Tools registered by MCP servers (prefixed with "serverName.").
+    var mcpTools: [any AgentTool] {
+        tools.values.filter { $0.name.contains(".") }.sorted { $0.name < $1.name }
+    }
+
     var enabledDefinitions: [ToolDefinition] {
         tools.values
             .filter { settings.isEnabled($0.name) }

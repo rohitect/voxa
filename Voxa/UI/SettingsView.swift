@@ -781,22 +781,15 @@ private struct AgentToolsTab: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 SettingsSection(title: "Built-in Tools") {
-                    ForEach(appState.agentCoordinator.toolRegistry.allTools, id: \.name) { tool in
-                        SettingsRow(label: toolDisplayName(tool.name)) {
-                            HStack(spacing: 6) {
-                                if tool.requiresConfirmation {
-                                    Image(systemName: "shield.fill")
-                                        .foregroundStyle(.orange)
-                                        .font(.caption)
-                                        .help("Requires user confirmation")
-                                }
-                                Toggle("", isOn: Binding(
-                                    get: { appState.agentCoordinator.toolRegistry.settings.isEnabled(tool.name) },
-                                    set: { appState.agentCoordinator.toolRegistry.settings.setEnabled(tool.name, enabled: $0) }
-                                ))
-                                .toggleStyle(.switch)
-                                .controlSize(.small)
-                            }
+                    ForEach(appState.agentCoordinator.toolRegistry.builtinTools, id: \.name) { tool in
+                        toolRow(tool)
+                    }
+                }
+
+                if !appState.agentCoordinator.toolRegistry.mcpTools.isEmpty {
+                    SettingsSection(title: "MCP Tools") {
+                        ForEach(appState.agentCoordinator.toolRegistry.mcpTools, id: \.name) { tool in
+                            toolRow(tool)
                         }
                     }
                 }
@@ -809,8 +802,36 @@ private struct AgentToolsTab: View {
         }
     }
 
+    @ViewBuilder
+    private func toolRow(_ tool: any AgentTool) -> some View {
+        SettingsRow(label: toolDisplayName(tool.name)) {
+            HStack(spacing: 6) {
+                if tool.requiresConfirmation {
+                    Image(systemName: "shield.fill")
+                        .foregroundStyle(.orange)
+                        .font(.caption)
+                        .help("Requires user confirmation")
+                }
+                Toggle("", isOn: Binding(
+                    get: { appState.agentCoordinator.toolRegistry.settings.isEnabled(tool.name) },
+                    set: { appState.agentCoordinator.toolRegistry.settings.setEnabled(tool.name, enabled: $0) }
+                ))
+                .toggleStyle(.switch)
+                .controlSize(.small)
+            }
+        }
+    }
+
     private func toolDisplayName(_ name: String) -> String {
-        name.split(separator: "_").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined(separator: " ")
+        // For MCP tools like "Kubernetes.pods List", display as-is with dot notation prettified
+        if name.contains(".") {
+            let parts = name.split(separator: ".", maxSplits: 1)
+            let server = parts[0]
+            let toolName = parts.count > 1 ? String(parts[1]) : ""
+            let prettyTool = toolName.split(separator: "_").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined(separator: " ")
+            return "\(server).\(prettyTool)"
+        }
+        return name.split(separator: "_").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined(separator: " ")
     }
 }
 
