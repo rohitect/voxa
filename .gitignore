@@ -42,3 +42,11 @@ credentials.json
 *.zip
 *.tar.gz
 *.rar
+scripts/VoxaLocalDev.p12
+scripts/release.sh
+scripts/import-signing-cert.sh
+scripts/create-signing-cert.sh
+scripts/build-dmg.sh
+docs/PERSONA_AND_MEMORY_SYSTEM.md
+docs/COMPUTER_USE_TOOLS.md
+scripts/build-dmg.sh
